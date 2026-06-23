@@ -1,0 +1,102 @@
+{
+  "timestamp": "2026-06-18T06:50:42.109103",
+  "dataset_pre": {
+    "n_total": 409,
+    "n_closed": 409,
+    "n_\u00faltimos 30d": 91,
+    "n_\u00faltimos 90d": 146,
+    "n_\u00faltimos 365d": 316,
+    "winrate": 0.46943765281173594,
+    "avg_r": 2.5360408312958436,
+    "avg_pnl": 30.975173122738386,
+    "setups": [
+      {
+        "setup": null,
+        "n": 313,
+        "avg_r": 0.2704150159744409,
+        "winrate": 0.4728434504792332
+      },
+      {
+        "setup": "RANGE_BREAKOUT_MOMENTUM",
+        "n": 48,
+        "avg_r": 13.38115625,
+        "winrate": 0.6458333333333334
+      },
+      {
+        "setup": "INTRADAY_BREAKOUT",
+        "n": 21,
+        "avg_r": 12.932695238095238,
+        "winrate": 0.2857142857142857
+      },
+      {
+        "setup": "RANGE_STRUCTURE_M15_FADE",
+        "n": 17,
+        "avg_r": -1.3075058823529413,
+        "winrate": 0.0
+      },
+      {
+        "setup": "MICRO_PULLBACK_MOMENTUM",
+        "n": 4,
+        "avg_r": 9.403725,
+        "winrate": 0.75
+      },
+      {
+        "setup": "BREAKOUT_CONTINUATION",
+        "n": 4,
+        "avg_r": 9.373325,
+        "winrate": 0.75
+      },
+      {
+        "setup": "RANGE_FADE_REVERSAL",
+        "n": 2,
+        "avg_r": -7.08095,
+        "winrate": 0.5
+      }
+    ],
+    "with_smc_features": 72,
+    "smc_bos": 189123,
+    "smc_choch": 202135,
+    "smc_order_blocks": 198712,
+    "smc_fvg": 2944236,
+    "smc_liquidity": 3795733,
+    "smc_confluence": 39667
+  },
+  "backup": {
+    "model_XAUUSD": {
+      "path": "D:\\AURION_DATA\\models\\backups\\model_XAUUSD_20260618_065039.pkl.bak",
+      "size_kb": 1741.0
+    },
+    "model_global": {
+      "path": "D:\\AURION_DATA\\models\\backups\\model_global_20260618_065039.pkl.bak",
+      "size_kb": 4363.1
+    }
+  },
+  "retrain": {
+    "ok": true,
+    "metrics": {
+      "walk_forward": 1.0,
+      "n_total": 351.0,
+      "n_train": 228.0,
+      "n_val": 45.0,
+      "n_test": 71.0,
+      "val_accuracy": 0.3111111111111111,
+      "val_f1": 0.41509433962264153,
+      "oos_accuracy": 0.5492957746478874,
+      "oos_f1": 0.6,
+      "oos_roc_auc": 0.5612980769230769
+    },
+    "elapsed_s": 1.3
+  },
+  "model_info": {
+    "exists": true,
+    "path": "D:\\AURION_DATA\\models\\model_XAUUSD.pkl",
+    "size_kb": 1720.7,
+    "modified": "2026-06-18T06:50:42.060142",
+    "keys": [
+      "version",
+      "kind",
+      "estimator",
+      "meta"
+    ]
+  }
+}

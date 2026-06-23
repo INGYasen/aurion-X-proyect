@@ -1,0 +1,1209 @@
+# AURION X 4.3 (7-jun-2026): SOLO XAUUSD - especializacion total en oro.
+# ─────────────────────────────────────────────────────────────────────────────
+# NDX100 y BTCUSD fueron ELIMINADOS por completo del proyecto:
+#   - Modelos .pkl borrados de D:\AURION_DATA\models\ (~7 MB liberados)
+#   - 1140 trades historicos eliminados de PostgreSQL
+#   - Secciones de configuracion abajo removidas
+# Razon: modelos v1 con AUC ~0.27 (no aportan edge); enfoque 100% en oro
+# donde el ensemble v2 (RF+LR+XGB+LGBM) tiene metricas sanas y patrones SMC
+# claros. Para retomar multi-activo en el futuro, hay que reincorporar las
+# secciones desde control de versiones (git history de este archivo).
+# ─────────────────────────────────────────────────────────────────────────────
+symbols: ["XAUUSD"]
+
+app:
+  # live: avisos si la configuración es laxa; alineado con filtros y riesgo más exigentes abajo.
+  environment: live
+
+# Fusión ML + stack M1–H1: sube score y confianza cuando mercado y modelo van en la misma dirección.
+edge_fusion:
+  enabled: true
+  mtf_stack_bonus: 14
+  ml_prob_aligned_boost: 0.04
+  # Solo fusionar cuando el modelo va bastante seguro con la dirección.
+  ml_prob_min: 0.60
+
+strategy:
+  scalper:
+    # SL/TP base en "pips" del símbolo (XAU pip=0.1). El orquestador aplica suelos/topos ATR.
+    sl_pips: 20
+    tp_pips: 42
+    # Con ticks en vivo, M1 crece ~1 vela/min; min_bars+1 velas totales hacen falta antes de evaluar scalper.
+    min_bars: 16
+    # AJUSTE FINO (28-may): los umbrales 0.72 / 0.000150 / 0.00028 generaban
+    # >95% de "no_strategy_signal" en 11h (0 trades). Bajamos a un punto medio
+    # razonable entre francotirador y operativo: aún exigente vs. defaults pero
+    # con suficiente flexibilidad para que el scalper detecte setups reales.
+    min_setup_momentum_score: 0.60
+    min_ema_separation_ratio: 0.000095
+    min_momentum_pct: 0.00018
+    # MT5 suele devolver volumen tick en 0 → el filtro anula casi todo el scalper.
+    volume_filter_enabled: false
+    volume_lookback: 20
+    min_volume_ratio: 0.95
+    min_volume_score: 0.32
+    breakout_min_volume_ratio: 1.12
+    range_breakout_min_momentum_score: 0.68
+    range_breakout_momentum_factor: 0.88
+    range_fade_enabled: true
+    range_fade_lookback: 30
+    range_fade_min_width_pct: 0.00009
+    range_fade_max_width_pct: 0.007
+    range_fade_edge_pct: 0.12
+    range_fade_close_body_min: 0.38
+    range_fade_sweep_tolerance: 0.10
+    range_fade_buy_max_position: 0.24
+    range_fade_sell_min_position: 0.76
+    range_fade_sl_pips: 14
+    range_fade_tp_pips: 22
+    range_fade_confidence_boost: 0.06
+    use_micro_structure_sl: true
+    micro_swing_lookback: 8
+    micro_swing_buffer_frac: 0.000015
+    micro_sl_atr_floor_mult: 0.55
+  structure:
+    conflict_resolve_bars: 18
+    conflict_min_net_return_pct: 0.06
+    momentum_fallback_bars: 22
+    momentum_min_return_pct: 0.32
+  impulse_log:
+    enabled: true
+    timeframe: H4
+    min_leg_return_pct: 3.0
+    max_legs: 6
+    log_interval_s: 900
+    exclude_forming_bar: true
+  # Intradía: calidad sobre cantidad (M15 + M1, filtros estrictos en el motor).
+  intraday:
+    min_m1_bars: 55
+    break_buffer: 0.00011
+    sl_buffer: 0.00012
+    tp_rr: 1.85
+    max_sl_range_frac: 0.50
+    break_extension_mult: 1.35
+    min_ema_separation_ratio: 0.000048
+    require_m1_bias_align: true
+    min_breakout_body_ratio: 0.58
+    min_bar_momentum_pct: 0.00004
+    enable_pullback_entries: false
+    pullback_min_body_ratio: 0.66
+    min_structure_key_levels: 3
+    use_structure_tp_zone: true
+    tp_zone_buffer_frac: 0.000018
+    tp_zone_min_rr: 1.15
+
+# AURION X 4.3 (7-jun-2026): notas sobre feature_schema
+# ------------------------------------------------------
+# Schema actual en produccion: v2 (25 features: 10 base + 15 quant/SMC).
+# Schema v3 (30 features: v2 + 5 macro DXY/US10Y/VIX) esta IMPLEMENTADO PERO
+# NO ACTIVADO por las siguientes razones:
+#   * Solo 226 trades v2 reales en dataset (post filter zombies + macro_v3=true).
+#   * Curse of dimensionality: 30 features / 226 trades = ratio 1:7.5, vs
+#     v2 con 1:9 (peor generalizacion en OOS holdout: AUC 0.467 -> 0.404).
+#   * Wiring runtime del MacroDataProvider en orchestrator NO esta completado
+#     (sin live data -> bot operaria con macro=0 = predicciones neutrales).
+# Para ACTIVAR v3:
+#   1) Acumular 500+ trades historicos (drift detector + auto-retrain ayudan).
+#   2) Implementar wiring de MacroDataProvider en core/orchestrator.py
+#      (inyectar macro features al features_dict antes de predictor.predict()).
+#   3) Reentrenar XAUUSD con AURION_FEATURE_SCHEMA=v3 y verificar OOS AUC > v2.
+#   4) Cambiar feature_schema abajo a "v3".
+ml:
+  enabled: true
+  model_path: "D:/AURION_DATA/models/model.pkl"
+  # AURION X 4.3 (7-jun-2026): drift detection con auto-retrain.
+  # Monitorea ventana movil de N trades vs baseline. Si WR o avgR caen, dispara
+  # accion: 'warn' (solo log), 'trigger_retrain' (reentrena modelo), o
+  # 'halt_trading' (futuro: pausa entradas hasta intervencion humana).
+  drift:
+    enabled: true
+    # AURION X 4.4 (11-jun-2026) — APRENDIZAJE ACELERADO
+    # window_size 50->30: el modelo reacciona a degradacion en 30 trades
+    # (~1-2 dias) en vez de 50 (~3-4 dias). min_trades_for_check 20->15
+    # permite el primer drift-check 25% antes. cooldown 24h->6h habilita
+    # hasta 4 auto-retrains por dia si el modelo se degrada.
+    window_size: 30
+    baseline_win_rate: 0.46     # WR historico XAUUSD ultimos 320 trades
+    baseline_avg_r: 0.26        # avgR historico XAUUSD
+    drift_wr_threshold: 0.08    # cae >8pp = warning (antes 10)
+    drift_r_threshold: 0.15     # cae >0.15R = warning (antes 0.20)
+    consecutive_warnings_for_critical: 2
+    min_trades_for_check: 15
+    cooldown_between_retrains_hours: 6
+    action_on_critical: "trigger_retrain"
+  walk_forward_enabled: true
+  walk_forward_min_samples: 60
+  walk_forward_train_ratio: 0.65
+  walk_forward_val_ratio: 0.15
+  auto_retrain_enabled: true
+  # Al arrancar: entrena desde PostgreSQL si falta el PKL o bootstrap_force_on_start=true
+  bootstrap_on_start: true
+  bootstrap_min_closed_trades: 30
+  bootstrap_force_on_start: false
+  # Reentreno agresivo en cold-start: cada 3 trades cerrados aprende; mínimo 3
+  # muestras (alineado con quant_ml.retrain_every_closed_trades=3). Con la nueva
+  # config (caps relajados, bypass apex, gap-veto) el bot acumulará entradas
+  # válidas y los modelos por-símbolo mejorarán solos en cuestión de horas.
+  # AURION X 4.4 (11-jun-2026): APRENDIZAJE ACELERADO - intervalo entre
+  # retrains 180s->90s (los retrains v2 toman ~2s, no hay riesgo de CPU).
+  auto_retrain_min_closed_trades: 3
+  auto_retrain_every_closed_trades: 3
+  feature_schema: v2
+  auto_retrain_limit: 5000
+  auto_retrain_batch: true
+  auto_retrain_min_interval_s: 90
+  # MODO FRANCOTIRADOR (objetivo: 60% winrate). Threshold base subido a 0.60:
+  # solo se opera con convicción ML alta. Floor subido para que el adaptativo
+  # no relaje por debajo de 0.50. El cap superior por modo limita cuánto puede
+  # subir el bias institucional encima del base.
+  # AJUSTE FINO (1-jun v3): threshold base bajado a 0.40 — un trade SELL con
+  # ml=0.80 + MTF descendente + SMC bearish-aligned se bloqueaba por margen
+  # mínimo. Con SMC institucional como filtro de calidad real, el umbral base
+  # puede ser menos exigente. Floor 0.30 protege contra cualquier setup ruidoso.
+  threshold: 0.40
+  # AURION X 4.2.5 — Ajuste 5-jun: con floor=0.50 + min_ml_conf_scalper=0.65
+  # el bot estuvo 12h sin operar (low_confidence rechazando ~70/5min).
+  # Relajación inteligente: floor 0.50→0.45 mantiene calidad mínima pero
+  # permite operar señales del modelo que tiene OOS accuracy ~0.58.
+  adaptive_threshold_floor: 0.45
+  disabled_threshold_relax: 0.08
+  disabled_confidence_boost: 0.06
+  disabled_max_threshold_cap: 0.50
+  veto_contradictions: true
+  # Endurecido: vetar contradicciones a partir de ml_conf 0.66 (antes 0.82).
+  # Junto con un gap mínimo más amplio (0.18 vs 0.12), elimina los empates
+  # marginales y mata cualquier trade donde el modelo apunta claro al lado
+  # contrario.
+  veto_confidence: 0.66
+  veto_min_gap: 0.18
+  # Pesos de entrenamiento ~ 1+|R| (cap 3) para enfatizar trades con resultado grande.
+  training_sample_weight_by_r: true
+  # Hueco temporal train→val en walk-forward (reduce fuga de información).
+  walk_forward_embargo_ratio: 0.02
+  # Etiqueta: win_loss (profit>0) o r_quality (R >= min_r_for_positive).
+  label_mode: win_loss
+  min_r_for_positive: 0.25
+  # Calibración Platt / isotónica sobre holdout temporal; none para desactivar.
+  # AURION X 4.4 (10-jun-2026): cambiado a "isotonic" tras audit mostrar
+  # overconfidence severa en ensemble (conf>0.70 -> WR 0%, conf 0.50-0.55 -> WR 83%).
+  # Isotonic corrige no-monotonicidad de las probs (Platt es lineal y no lo capturaba).
+  calibration_method: isotonic
+  calibration_holdout_ratio: 0.18
+  # MODO FRANCOTIRADOR: range_fade en EXTREME tienen winrate <30% históricamente,
+  # se bloquean para preservar la probabilidad objetivo del 60%.
+  skip_range_fade_on_extreme_vol: true
+  # Suma al umbral ML cuando el régimen es EXTREME (todas las entradas restantes).
+  # Bajado de 0.17 a 0.05: con threshold base 0.38 y EXTREME muy frecuente,
+  # cualquier add alto dejaba ml_thr en 0.55+ y bloqueaba ml=0.60-0.70.
+  extreme_vol_ml_threshold_add: 0.05
+  # EXTREME + breakout con M5 aún en rango: exige un poco más de confianza (reduce rachas en chop).
+  extreme_range_breakout_m5_range_ml_threshold_add: 0.04
+  # MODO FRANCOTIRADOR: caps subidos para que el threshold adaptativo pueda
+  # alcanzar la zona de alta convicción cuando el sistema detecta condiciones
+  # adversas (institutional + extreme_add + bucket negativo). El piso (0.50)
+  # garantiza que nunca baje de ese nivel.
+  # v4.1 HÍBRIDO: bajamos `normal` de 0.66 → 0.55 porque los logs muestran
+  # repetidos skips por "conf efectiva < umbral ML adaptativo 0.660" en
+  # XAUUSD scalper con ml=0.60-0.69. El piso global (0.50) sigue protegiendo.
+  # AJUSTE FINO (1-jun v3): cap conservative bajado a 0.44 — la conf efectiva
+  # XAUUSD se descuenta fuerte por bias del modelo (ml=0.79 → conf=0.46).
+  # Mientras el bot acumula trades nuevos para corregir el bias, necesitamos
+  # caps bajos para destrabar la operativa. SMC + Knowledge filtran calidad real.
+  # AURION X 4.2.5 — Ajuste 5-jun: bajados ligeramente para permitir
+  # operar en modo aggressive con señales del rango 0.45-0.55 del modelo.
+  # Antes (0.65/0.60/0.55) era muy estricto cuando el modelo daba 0.50-0.55.
+  adaptive_threshold_caps:
+    conservative: 0.60
+    normal: 0.55
+    aggressive: 0.50
+  # Fix #8: monitor de bias del modelo ML por símbolo. Si en las últimas N
+  # predicciones >=warn_ratio (80%) van a un solo lado (BUY o SELL) se emite
+  # un WARN cada warn_interval_s. Detecta sesgos de entrenamiento o feature
+  # drift antes de que generen pérdidas sistemáticas (en logs nocturnos XAUUSD
+  # predijo SELL casi siempre contradiciendo señales BUY de la estrategia).
+  bias_monitor:
+    window: 200
+    warn_ratio: 0.80
+    min_samples: 80
+    warn_interval_s: 1800
+  # Modelo ML solo para RANGE_FADE (opcional). Cadena vacía = no cargar.
+  range_model_path: ""
+  # Filtro de dataset al entrenar: all | range | momentum (ver features_json.ml_dataset_context).
+  train_dataset_context: all
+  # Opcional: filtro distinto en auto-retrain; si se omite, el Trainer usa train_dataset_context.
+  # auto_retrain_dataset_context: all
+
+# Motor cuantitativo auto-adaptativo (ensemble + self-learning + daily retrain)
+quant_ml:
+  enabled: true
+  use_extended_features: true
+  use_ensemble: true
+  models_dir: "D:/AURION_DATA/models"
+  memory_path: "D:/AURION_DATA/memory/trade_memory.json"
+  ml_decision_weight: 0.65
+  min_structural_score: 28
+  # Auto-entreno más agresivo: cada 5 trades cerrados (antes 10), cooldown
+  # 180s (antes 300s), self-learning cada 60s (antes 120) con menos samples.
+  # Esto permite que el modelo aprenda en cada timeframe en tiempo real.
+  retrain_every_closed_trades: 3
+  retrain_min_interval_s: 120
+  daily_retrain_utc_hour: 22
+  self_learn_interval_s: 45
+  self_learn_min_samples: 6
+  self_learn_lookback: 800
+  confidence_ml_weight: 0.45
+  confidence_probability_weight: 0.25
+  confidence_quality_weight: 0.15
+  confidence_institutional_weight: 0.10
+  confidence_execution_weight: 0.05
+  retrain_min_symbol_trades: 12
+  memory_recency_half_life_days: 14
+  oos_validation:
+    min_expectancy: -0.05
+    max_oos_drawdown_pct: 12.0
+    min_sharpe: -0.5
+    max_overfitting: 0.35
+    min_rank_improve: 0.002
+  symbol_models:
+    use_per_symbol_dirs: true
+    sync_legacy_deploy: true
+
+# Capa institucional (tablas PG dedicadas, ranking, funded mode, exit AI)
+institutional:
+  enabled: true
+  # AJUSTE FINO (1-jun): tras 24h sin trades, bajamos a C para permitir setups
+  # decentes con confluencia SMC. Con 50+ OB / 9989 BOS / 8829 CHOCH detectados
+  # en PostgreSQL, el contexto institucional ya es muy rico y compensa la menor
+  # exigencia del grade mínimo. El motor SMC actuará como filtro de calidad
+  # adicional (score_modifier rebaja confidence si el bias contradice la señal).
+  min_setup_grade: C
+  defensive_dd_pct: 4.0
+  optimizer_min_samples: 12
+  exec_quality_window: 80
+  asset_decision_weights:
+    XAUUSD: 0.68
+  fundingpips:
+    enabled: true
+    adaptive_mode: true
+    max_daily_dd_pct: 4.0
+    max_total_dd_pct: 8.0
+    # AURION X 4.3 (7-jun-2026): solo XAUUSD activo. Mantenemos cap 30/dia
+    # como margen amplio (XAU rara vez genera mas de 10-15 trades/dia con
+    # los nuevos filtros institucionales).
+    max_trades_per_day: 30
+    max_trades_per_hour: 8
+    # AJUSTE FINO (1-jun): subido a 8 — la racha actual de XAUUSD=6 (heredada
+    # de la config vieja sin SMC+Knowledge+overrides) bloqueaba todo. Con los
+    # nuevos filtros institucionales y aprendizaje continuo activado, el bot
+    # es otro sistema. Permitimos margen para validar la nueva calidad de
+    # entries. Si se demuestra peor, bajamos de vuelta a 5.
+    block_after_consecutive_losses: 8
+    min_minutes_between_entries: 2.0
+    impulsive_score_max: 42
+  consistency:
+    enabled: true
+    max_daily_profit_pct: 2.2
+    target_daily_profit_pct: 0.75
+    reduce_after_green_day: true
+
+# Capa Apex: microestructura, estado latente, meta-riesgo, RL, jerarquía de decisión
+apex:
+  enabled: true
+  latent_states: 6
+  # AJUSTE FINO (1-jun): tras 24h sin operaciones, subimos cap horario a 10
+  # (sesión Londres+NY tiene >10 oportunidades reales) y bajamos spacing a 60s
+  # para no perder cluster de señales correlacionadas (BOS+OB tap simultáneo).
+  max_entries_per_hour: 10
+  max_signals_per_10min: 18
+  min_entry_spacing_s: 60
+  exec_intel_window: 120
+  exec_block_threshold: 0.28
+  evolution_min_samples: 15
+  rl_learning_rate: 0.10
+  rl_memory_path: "D:/AURION_DATA/ml/rl_policy.json"
+  # Umbrales ML/Hyper: bajados de 0.36→0.30 y 0.25→0.20 para que ml=0.60-0.65
+  # con confluencia SMC sea suficiente para entrar. El SMC score_modifier es
+  # ahora el filtro de calidad real (penaliza si bias contradice).
+  ml_threshold_base: 0.30
+  ml_strong_threshold: 0.50
+  hyper_min_score: 0.20
+  hyper_cold_start_min: 0.12
+  meta_risk:
+    defensive_dd_pct: 3.5
+    aggressive_winrate: 0.56
+    bad_winrate: 0.38
+
+risk:
+  # AURION X 4.3 (7-jun-2026): filtro de calendario economico USD.
+  # Bloquea APERTURA de trades en ventana alrededor del release.
+  # No afecta a trades ya abiertos (los gestiona dynamic_exit).
+  # BACKTEST sobre 320 trades XAUUSD historicos revelo que filtrar CPI/PPI/Retail
+  # restaba PnL (5 trades en news tenian WR 80% y avgR +1.35). Por eso include_recurring
+  # esta restringido SOLO a NFP por defecto. FOMC se carga via custom_events.
+  # Override: si ml_conf >= override_high_ml_conf, NO se aplica blackout (permite
+  # trades de muy alta calidad capitalizar volatilidad del release).
+  news_calendar:
+    enabled: true
+    blackout_before_min: 30
+    blackout_after_min: 60
+    override_high_ml_conf: 0.85
+    include_recurring:
+      - "NFP"      # Non-Farm Payrolls (1er viernes 13:30 UTC) - SOLO este por defecto
+      # - "CPI"      # Comentado: backtest mostro que filtrarlo restaba PnL
+      # - "PPI"
+      # - "RETAIL_SALES"
+      # - "PCE_CORE"
+    custom_events: []
+    # Ejemplo FOMC ad-hoc:
+    # custom_events:
+    #   - name: "FOMC_RATE_DECISION"
+    #     timestamp_utc: "2026-06-18T18:00:00Z"
+    #     severity: "high"
+    #     blackout_before_min: 60
+    #     blackout_after_min: 120
+  # Endurecido (1.10 → 0.95): al permitir más entradas válidas con los nuevos
+  # bypass/cap relajados, conviene reducir el riesgo por trade para que el
+  # equity-at-risk total no crezca y el "x2" venga de frecuencia de calidad,
+  # no de leverage por operación.
+  # AURION X 4.3 (7-jun-2026): solo XAUUSD activo. Riesgo 0.80% por trade
+  # se mantiene como punto de equilibrio. Cuando winrate XAU supere 55%
+  # consistentemente se puede volver a 0.95 o mayor.
+  risk_per_trade: 0.80
+  max_dd_pause: 5
+  max_dd_stop: 8
+  correlation_groups: []
+  max_open_per_correlation_group: 2
+  intraday_kill_switch:
+    enabled: true
+    window_trades: 22
+    min_trades: 8
+    bad_winrate: 0.40
+    bad_avg_r: -0.20
+    require_both: false
+    cooldown_s: 3600
+  # MODO FRANCOTIRADOR: circuit breaker EARLY más sensible (cualquiera de las
+  # dos condiciones dispara). 2 pérdidas y wr<25% O avgR<=-1.5R pausa el
+  # símbolo el resto del día UTC.
+  early_kill_switch:
+    enabled: true
+    min_trades: 2
+    bad_winrate: 0.25
+    bad_avg_r: -1.5
+    require_both: false
+  risk_pct_min: 0.40
+  risk_pct_max: 2.50
+  # Aperturas nuevas por día (RiskManager). 0 = sin límite (solo drawdown, racha y riesgo por trade).
+  max_entries_per_day: 0
+  # Topes de posiciones abiertas según el libro interno (0 = sin límite). Evita ráfagas de muchas entradas a la vez.
+  # 3 símbolos × 1 posición/símbolo como máximo operativo simultáneo.
+  max_open_positions_total: 3
+  max_open_positions_per_symbol: 1
+  max_consecutive_losses: 6
+  # true = tras agotar el cooldown por racha, se resetea el contador.
+  # Sin esto, una vez activada la pausa (15 pérdidas reales), el bot quedaba
+  # bloqueado hasta cambio de día UTC. Con el reset post-cooldown se reanuda
+  # operativa pero con lote reducido por el FundingPipsGuard (lot_cap 0.70 si
+  # consecutive_losses>=2) hasta encadenar ganadoras.
+  loss_streak_reset_after_cooldown: true
+  # Fix #5: cooldown temporal escalonado POR SÍMBOLO tras N pérdidas
+  # consecutivas. Antes del hard block (loss_streak_revenge_guard al llegar a
+  # block_after_consecutive_losses=5) damos un "descanso" del MISMO símbolo
+  # entre pérdida 2 y pérdida 4 sin tocar otros activos. Esto evita revenge
+  # trading silencioso. Las claves son el loss_streak alcanzado y el valor en
+  # segundos. ml_strong_override + grade A+ salta el cooldown (alta convicción).
+  post_loss_cooldown_seconds:
+    2: 900    # 15 min tras 2 pérdidas seguidas
+    3: 2700   # 45 min tras 3 pérdidas seguidas
+    4: 5400   # 90 min tras 4 pérdidas seguidas
+  # Kill-switch por símbolo: si el PnL realizado del día (UTC) cae por debajo de -max_loss_money, no abre más.
+  symbol_daily_loss:
+    enabled: true
+    max_loss_money: 120.0
+
+execution:
+  # Alineación del libro interno con MT5 (segundos; 0 = solo al arranque vía start).
+  reconcile_positions_interval_s: 30
+  # Antes de cada nueva entrada: sincroniza con MT5 para que el tope por activo sea real (evita 3× el mismo segundo).
+  reconcile_before_new_entry: true
+  # Exige que el scalper no vaya contra la tendencia H4 (crítico en oro/índices en 4H).
+  scalper_require_h4_alignment: true
+  # Endurecido (28-may): los flags relajados producían -944R en SCALPER (88-93%
+  # cierres en BE prematuro tras entradas en chop). Reactivamos los filtros
+  # estructurales originales y dejamos que ml_strong_override (ml_conf >= 0.74)
+  # sea la única vía de bypass cuando hay convicción combinada.
+  skip_scalper_extreme_m5_range: true
+  block_scalper_counter_htf: true
+  # AURION X 4.2 — Diagnóstico del 2-jun-2026: trades con risk_pips 1.7-4.2$
+  # (median 3.2$) generando R=-19 / R=-98 al hitear SL en cualquier respiración.
+  # Subimos floor a 2.0x ATR (de 1.4x) → SL típico ~5-7$ en lugar de 3$, mucho
+  # más absorbente de ruido sin destruir RR (max 1.80R sigue alcanzable).
+  # max_sl_price_pct subido 0.0015 → 0.0025 (0.25%) para permitir SL holgados
+  # en sesiones volátiles sin truncarlos artificialmente.
+  # AURION X 4.2.2 — post-mortem 3-jun-2026 (madrugada noche 02→03):
+  # 17 trades, 14 micro-wins ($+0.10–1.19) vs 3 losses ($-4.53 c/u) = NET $-1.51.
+  # Causa raíz: SL ~42 pips para XAU es ruido, ML conf ~0.535 (neutro)
+  # entrando como SCALPER en chop. Endurecemos SL floor y RR mínimo.
+  min_sl_atr_m1_mult: 2.5            # antes 2.0 → SL ~6.5-8$ XAU en lugar de 5-6$
+  max_sl_atr_m1_mult: 3.2            # antes 2.8 → permite holgura mayor en NY/Asia open
+  max_sl_price_pct: 0.0030           # antes 0.0025 → 0.30% del precio (~14$ en XAU 4500)
+  legacy_sl_contamination_threshold_pct: 0.0030
+  min_tp_rr_after_sl_floor: 1.50     # antes 1.30 → si abrimos, TP debe ser >=1.5x el SL
+  max_tp_rr: 2.20                    # antes 1.80 → permite TPs más generosos cuando hay tendencia
+  max_tp_rr_intraday: 2.40           # antes 1.95
+
+  # AURION X 4.2.2 — CHOP GUARD endurecido (post-mortem noche 02→03 jun 2026)
+  # 3 perdedores estructurales (-10.79R, -14.72R, -10.74R) entraron a las
+  # 05:44, 06:18 y 09:00 UTC. El SL multiplier de asia solo cubría 00-06,
+  # pero el problema sigue presente en pre-London (06-09) y London-open (09).
+  # Endurecemos:
+  #   - asia_hours extendido hasta las 09 (cubre overlap Asia→London)
+  #   - SL multiplier subido a 1.45 (era 1.30)
+  #   - range_position más conservador (long_max 0.55, short_min 0.45)
+  #   - Nuevo: 2-loss cooldown (2 losses seguidos con |R|>=2 → pausa 90 min)
+  #   - Nuevo: bloqueo de ML conf bajo (<0.60) para scalper en chop
+  chop_guard:
+    enabled: true
+    asia_sl_multiplier: 1.45              # antes 1.30
+    asia_hours_utc: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]   # extendido hasta London open
+    enforce_range_position: true
+    long_max_range_position: 0.55         # antes 0.65 → más conservador
+    short_min_range_position: 0.45        # antes 0.35 → más conservador
+    micro_trade_window: 5
+    micro_trade_avg_abs_r_max: 0.50       # antes 0.40 → corta antes el chop
+    micro_trade_cooldown_min: 60          # antes 45
+    # 4) Nuevo: 2-loss cooldown. Si los últimos N trades terminan con R muy
+    # negativo, pausa preventiva más larga para no perseguir.
+    consecutive_loss_window: 2            # últimos 2 trades
+    consecutive_loss_min_abs_r: 2.0       # cada uno con |R|>=2.0 (pérdida real, no ruido)
+    consecutive_loss_cooldown_min: 90     # pausa 90 minutos
+    # 5) ML conf mínima para scalper. Ajuste 5-jun: 0.65→0.58. Con el bug
+    # del cap ya arreglado (floor=0.45 + bug strategy_name fix) la protección
+    # ahora SÍ se aplica correctamente. 0.58 todavía rechaza conf 0.40-0.55
+    # (los perdedores típicos) pero deja pasar señales decentes del modelo.
+    min_ml_conf_scalper: 0.58
+    enforce_ml_conf_scalper: true
+    # 6) Setup blacklist: bloquea setups con edge claramente negativo en backtest.
+    # AURION X 4.3 (10-jun-2026): re-auditoria 30d:
+    #   - RANGE_STRUCTURE_M15_FADE   17 trades 0% WR  avgR=-1.31  → mantener bloqueo
+    #   - RANGE_FADE_REVERSAL         2 trades 50% WR avgR=-7.08  → bloqueo preventivo
+    #     (los 2 trades cerraron con SL hits enormes; setup poco probado en zona ruido).
+    blocked_setups:
+      - RANGE_STRUCTURE_M15_FADE
+      - RANGE_FADE_REVERSAL
+    # AURION X 4.4 (10-jun-2026) — filtros horarios basados en estadistica real
+    # Diagnostico ultimos 100 trades XAUUSD por hora UTC:
+    #   h=03  N=11  WR=27.3%  <- Asia: liquidez baja, ruido alto
+    #   h=05  N= 6  WR=33.3%
+    #   h=09  N= 3  WR= 0.0%  <- London open ambiguo (gap, fakeouts)
+    #   h=17  N= 4  WR=25.0%  <- lunch NY (post-EU close, pre-NY trend)
+    # vs h=19 WR=70%, h=20 WR=50%, h=14 WR=50% (sesion NY consistente)
+    weak_hours_utc: [3, 5, 17, 22]        # +0.07 al min_ml_conf_scalper
+    weak_hours_ml_boost: 0.07
+    blocked_hours_utc: [9]                # bloqueo categorico WR=0% historico
+  # ─────────────────────────────────────────────────────────────────────────
+  # AURION X 4.4 (10-jun-2026) — MODO OBSERVADOR
+  # Cuando `observer_mode: true` el bot ejecuta TODO el pipeline normalmente:
+  #   - Conecta a MT5 y consume ticks/velas en tiempo real
+  #   - Calcula features, SMC, MTF, ML predictions, scoring
+  #   - Aplica todos los filtros (ChopGuard, Drift, NewsCalendar, etc.)
+  #   - Decide si abriria entrada y emite log [OBSERVER] con los detalles
+  # PERO **NO envia ordenes al broker**. Util para:
+  #   - Pausar trading sin perder feed de datos / aprendizaje pasivo
+  #   - Validar nueva config en mercado real antes de habilitar trading
+  # Para reactivar trading, poner observer_mode: false y reiniciar el bot.
+  # AURION X 4.4 (11-jun-2026): REACTIVADO trading normal — el usuario
+  # pidio "que este ejecutandose todo correctamente" + acelerar aprendizaje.
+  # El aprendizaje rapido requiere generar trades reales (cerrados con R).
+  observer_mode: false
+  # Cuenta posiciones abiertas en el bróker además del libro interno (max(internal, broker)).
+  enforce_broker_position_caps: true
+  order_magic: 300000
+  reconcile_filter_magic: true
+  # Equity desde MT5 (recomendado): el sizing usa el patrimonio real, no solo el valor fijo de `equity:` arriba.
+  use_live_equity: true
+  # Lote mínimo bróker; el PositionSizer ya no exige el lote "tabla" como mínimo (evitaba abrir con riesgo bajo).
+  min_lot: 0.01
+  # MODO FRANCOTIRADOR: floor de score subido a 55 (antes 42). Cualquier
+  # señal con score < 55 tras penalizaciones se rechaza directamente.
+  entry_score_floor: 55
+  # Log INFO justo antes de order_send (ver intentos aunque el bróker rechace).
+  log_trade_attempts: true
+  # MODO FRANCOTIRADOR: filtro de sesión hard DESACTIVADO. Causaba bloqueo
+  # 100% (498/498 intentos) porque `tick.time_utc` viene del servidor MT5
+  # del broker (típicamente UTC+2/+3), no del PC. Los filtros de calidad
+  # alta (grade A+, ml_conf >= 0.60, score >= 48, MTF 3+) ya rechazan
+  # entradas en horas muertas/chop sin necesidad de un cutoff horario duro.
+  # BTC además opera 24/7 (cripto). Para forzar ventana NY, usa
+  # `asset_profiles.<SYM>.preferred_sessions` (ya configurado).
+  session_filter_enabled: false
+  session_timezone: UTC
+  session_start: "07:30"
+  session_end: "20:30"
+  cooldown_sec: 120
+  ignore_spread: false
+  spread_max_points: 180
+  spread_high_points: 85
+  spread_extreme_points: 160
+  # AJUSTE FINO (28-may): 48/62 dejaban demasiada presión al score; con caps
+  # adaptativos altos y MTF estricto se traduce en 0 trades. Bajamos a 42/54
+  # (sigue siendo más exigente que 32/45 por defecto).
+  score_min_normal: 42
+  score_min_strong: 54
+  atr_spike_enabled: false
+  atr_spike_threshold: 8.0
+  atr_min_samples: 400
+  # Baja el “ruido” en vivo: menos reevaluaciones por segundo.
+  tick_poll_interval_s: 0.20
+  # Ciclo de decisión por símbolo (ms); más bajo = más reacción (más CPU).
+  decision_interval_ms: 1500
+  mtf_trends_cache_ttl_s: 0.0
+  mtf_max_bars: 500
+  # AJUSTE FINO (28-may): MTF 3-de-9 alineados es irreal en chop macro (los
+  # logs muestran 95% del tiempo H1/H4/D1/W1 en RANGE simultáneamente). Bajamos
+  # a 2 y permitimos all-range si ml_conf>=0.74 (override flexible).
+  mtf_entry_min_support: 2
+  mtf_allow_when_all_entry_range: true
+  mtf_ml_strong_override_th: 0.74
+  # AJUSTE FINO (28-may): EXTREME sin volumen — bajamos a 0.62 (antes 0.72).
+  extreme_no_volume_ml_strong_th: 0.62
+  structure_timeframe: M15
+  relax_structure_range_when_mtf_aligned: true
+  skip_mtf_filter: false
+  lenient_extreme_volatility: false
+  entry_validator:
+    # AJUSTE FINO (28-may): re-habilitamos relax_range_when_mtf_aligned y
+    # scalper_ignore_structure_trend — sin ellos en chop macro el validator
+    # rechaza casi todo. Mantenemos rígidos los flags más críticos
+    # (against_trend con ML strong y allow_extreme_when_mtf_aligned).
+    allow_low_vol_breakout_when_mtf_aligned: true
+    allow_extreme_when_mtf_aligned: false
+    scalper_ignore_structure_trend: true
+    allow_against_trend_when_ml_strong: false
+    relax_range_when_mtf_aligned: true
+  ny_turbo:
+    # Ventana NY para XAUUSD (London + Apertura NY).
+    enabled: true
+    symbols: ["XAUUSD"]
+    start: "09:35"
+    end: "11:30"
+  tp_hunter:
+    enabled: true
+    # MODO FRANCOTIRADOR: TPs alineados con max_tp_rr global 1.80 (antes 2.25).
+    # TP cercano = mayor hit rate.
+    impulse_mult: 1.08
+    impulse_strong_mult: 1.14
+    low_vol_mult: 0.90
+    min_rr: 1.25
+    max_rr: 1.80
+    max_rr_intraday: 1.95
+  chart_hints:
+    enabled: true
+    require_trade_ready: true
+    min_confidence: 0.40
+    # Menos reescrituras del CSV si la señal no cambia de vela M1 / conf redondeada.
+    dedupe_by_m1_bar: true
+    confidence_round_decimals: 3
+    # Solo hints con score mínimo (menos ruido en CSV/MT5).
+    min_score: 28
+    write_interval_ms: 400
+    path: "D:/AURION_DATA/hints/aurion_live_hints.csv"
+  spread_guard:
+    enabled: true
+    lookback_ticks: 30
+    spike_mult: 2.2
+    max_points: 280
+  sniper:
+    # AJUSTE FINO (28-may): require_learning_whitelist=true bloquea TODO setup
+    # sin histórico previo en el bucket (modo cold-start = 0 trades). Lo
+    # desactivamos para que el bot aprenda en vivo. Mantenemos los umbrales
+    # online_* y el override de impulso fuerte para no degradar calidad.
+    enabled: true
+    # AJUSTE FINO (1-jun): los dead_hours estaban bloqueando UTC 03-05 (= 22-00
+    # NY = Asia activa) y 22-23 (= 17-18 NY = NY tarde). Esto bloqueaba el rally
+    # asiático de XAUUSD y la última hora de NY donde gold reactiva.
+    # Nuevo: solo bloquear la franja realmente muerta UTC 23-02 (post-NY close
+    # antes de que Asia despierte fuerte). Tokyo abre 00 UTC pero hasta ~02 UTC
+    # el volumen es bajo. Sesión Londres (07-15 UTC) y NY (12-21 UTC) liberadas.
+    dead_hours_utc: [23, 0, 1, 2]
+    require_learning_whitelist: false
+    learning_timezone: "America/New_York"
+    min_samples_per_bucket: 20
+    # AJUSTE FINO (1-jun): bajamos umbrales para arrancar operativa en vivo.
+    # Con SMC activo (50+ OB, BOS, FVG detectados) tenemos contexto institucional
+    # que el sniper original no usaba — podemos relajar el sniper estadístico.
+    min_expectancy_r: 0.0
+    min_winrate: 0.45
+    allow_strong_impulse_override: true
+    online_min_samples: 15
+    online_bad_expectancy_r: -0.25
+    online_good_expectancy_r: 0.05
+    online_good_winrate: 0.48
+  entry_skip_log_interval_s: 45
+  # Cada N segundos vuelca un único INFO BLOCK_SUMMARY con el top de motivos
+  # de bloqueo cross-símbolo (telemetría agregada para diagnosticar dónde se
+  # concentra el rechazo sin saturar el log). Desde Fix #9 incluye el top de
+  # setups bloqueados (reason@setup_type) para detectar setups tóxicos antes
+  # de que generen pérdidas reales.
+  block_summary_window_s: 300
+  # AJUSTE FINO (1-jun): subido a 14400s (4h). El filtro chop_macro estaba
+  # bloqueando RANGE_BREAKOUT_MOMENTUM constantemente porque XAUUSD pasa
+  # mucho tiempo en consolidación entre rangos. Con SMC ya detectando BOS/CHOCH
+  # reales por TF, el chop ya no es un riesgo ciego: SMC nos dice si hay
+  # estructura institucional bullish o bearish detrás del rango.
+  chop_macro_min_duration_s: 14400
+  # Cooldown entre entradas: bajado de 180s a 90s para no perder rebound tras
+  # SL toque rápido en estructura confirmada por SMC.
+  min_seconds_between_entries_per_symbol: 90.0
+  # Gestión en vivo de trades RANGE_FADE (TP parcial antes del extremo opuesto).
+  range_trade_management:
+    partial_tp_enabled: true
+    partial_tp_at_r: 0.42
+    partial_tp_fraction: 0.56
+  # Trades INTRADAY_*: ajuste de SL según recorrido hacia el TP.
+  # Endurecido (28-may): el BE/tighten al 30/50% provocaba que >85% de los
+  # trades cerraran exactamente en R=0 (BE prematuro) porque cualquier
+  # retroceso normal del mercado lo activaba. Subir los umbrales deja que
+  # los trades respiren y alcancen TP completo cuando la tesis es correcta.
+  intraday_trade_management:
+    enabled: true
+    # AURION X 4.3 — post-mortem 7-jun-2026: los 5 trades XAUUSD de junio
+    # cerraron en R=0 (BE) con modelo v2. Causa: BE en 72% TP era prematuro
+    # combinado con dynamic_exit.secure_profit_r=0.60 y profit_lock.soft=20%.
+    # Subimos a 65/82% para dejar respirar más al trade.
+    tighten_from_tp_progress: 0.65
+    breakeven_at_tp_progress: 0.82
+    be_buffer_pips: 5.0
+  # Scalper / momentum (no INTRADAY): sube tp_pips en strategy.scalper; aquí se blinda parte del MFE hacia el TP.
+  # Endurecido (28-may): diagnóstico de 600 trades cerrados mostraba 88%
+  # XAUUSD, 92% NDX100 y 84% BTCUSD cerrando en R=0 exacto (SL movido a BE
+  # demasiado pronto). Causa de fondo del netPnl negativo: cortábamos los
+  # ganadores en BE y los perdedores tocaban SL completo. Solución: armar
+  # el lock más tarde, mover BE solo en 75%+ recorrido, mayor buffer.
+  scalper_trade_management:
+    enabled: true
+    # AURION X 4.3 — alineado con intraday_trade_management para evitar doble
+    # lockeo prematuro. Arm en 65% TP, BE floor en 85% TP (no antes).
+    arm_at_tp_progress: 0.65
+    lock_max_favorable_excursion_frac: 0.40
+    breakeven_floor_at_tp_progress: 0.85
+    be_buffer_pips: 6.0
+  # MODO FRANCOTIRADOR: dynamic_exit activado. Secure_profit en 0.60R (cierra
+  # parcial 40% asegurando ganancia cuando el trade va a favor); BE solo
+  # después de 0.85R (no antes); trailing armado en 0.85R con multiplicador
+  # ATR amplio (1.4x) para dejar correr ganadores. El objetivo: convertir
+  # los 88% R=0 actuales en 60% R>0 con secure_profit + 25% R≈0 + 15% SL.
+  dynamic_exit:
+    enabled: true
+    momentum_loss_threshold: 0.32
+    # AURION X 4.3 (7-jun-2026): secure_profit_r 0.60→0.85. Los trades del
+    # modelo v2 (junio) cerraban el parcial muy temprano y el resto se devolvia
+    # a BE = profit $0. Subimos a 0.85R para asegurar solo cuando hay edge real.
+    secure_profit_r: 0.85
+    # breakeven_r alineado con secure: BE solo despues de 1.0R (no antes).
+    breakeven_r: 1.00
+    partial_close_percent: 40.0
+    trailing_atr_multiplier: 1.40
+    trailing_arm_r: 1.00
+    absorption_strength_threshold: 0.55
+    compression_threshold: 0.72
+    max_giveback_allowed: 0.30
+    min_trail_improve_pips: 1.5
+    # AURION X 4.2.3 — Profit Lock progresivo (% del recorrido entry→TP).
+    # Solicitud del usuario tras ver trades intradía que llegaron a +20% TP
+    # y se devolvieron a pérdida. Lógica:
+    #   1) progress ≥ 20% TP   → SL = entry + 3% del recorrido  (lock pequeño)
+    #   2) progress ≥ 35% TP   + señal de reversión
+    #                          → SL = entry + 20% del recorrido (asegurar 20%)
+    #   3) Tras lock 2, deja correr; si saca SL ya estamos en +20% TP.
+    profit_lock:
+      enabled: true
+      # AURION X 4.3 (7-jun-2026): Profit lock muy agresivo cerraba trades en BE.
+      # Subimos soft 20%→35% TP, soft_lock 3%→5%, hard 35%→55% TP, hard_lock 20%→25%.
+      # Le damos al trade espacio para respirar antes de proteger.
+      soft_trigger_pct: 0.35       # 35% del recorrido entry→TP alcanzado (antes 20%)
+      soft_lock_pct: 0.05          # SL a +5% del recorrido (BE + colchon mayor)
+      hard_trigger_pct: 0.55       # 55% del recorrido + senal de reversion (antes 35%)
+      hard_lock_pct: 0.25          # SL a +25% del recorrido (asegura 25% del TP)
+      reversal_momentum_loss: true
+      reversal_absorption_min: 0.50
+      reversal_velocity_loss: true
+      reversal_lateral_soft: true
+
+# AJUSTE FINO (28-may): range_quality demasiado estricto bloqueaba el único
+# tipo de setup viable en chop macro (RANGE_FADE_REVERSAL). Relajamos
+# deadband 25-75, score 50, rejections 2 — sigue siendo conservador.
+range_quality:
+  enabled: true
+  center_deadband_low: 0.25
+  center_deadband_high: 0.75
+  min_range_score: 50.0
+  max_chop_score: 50.0
+  breakout_watch_min: 55.0
+  skip_fade_on_breakout_watch: true
+  min_absorption_edge: 0.38
+  touch_zone_frac: 0.045
+  min_rejections: 2
+
+volatility:
+  window: 200
+  low_cv: 0.00005
+  high_cv: 0.00042
+  extreme_cv: 0.0095
+
+asset_profiles:
+  # pip_value_per_lot: USD aproximado de pérdida por 1.0 pip de precio y 1.0 lote (ajusta a tu bróker).
+  # Opcional: ml_model_path por activo sobreescribe el PKL global en inferencia para ese símbolo.
+  # Opcional: dynamic_exit por símbolo fusiona claves sobre execution.dynamic_exit (p. ej. enabled: true solo en oro).
+  XAUUSD:
+    ml_decision_weight: 0.68
+    # AJUSTE FINO (28-may v2): los logs mostraron que A bloqueaba TODOS los
+    # setups grade=B (con ml_conf 0.77-0.82, calidad clara). Bajamos a B; la
+    # whitelist online filtrará los buckets perdedores en tiempo real.
+    min_setup_grade_aggressive: B
+    ml_weights:
+      liquidity_sweep: 1.45
+      absorption: 1.35
+      manipulation: 1.30
+      volatility: 1.25
+    ml_model_path: "D:/AURION_DATA/models/model_XAUUSD.pkl"
+    pip_value_per_lot: 1.0
+    # AURION X 4.3 (7-jun-2026): Comparativa golden period (ago-oct 2025: WR 62%,
+    # +$7K profit) vs actual (abr-jun 2026: WR 30%, BE): SL promedio era 39.7p
+    # en golden y 261.5p reciente (6.5x mayor!). Bajamos topes a niveles
+    # cercanos al golden sin volver al 42p rígido que provocaba SL-hit prematuros.
+    min_sl_pips: 26                    # antes 28
+    max_sl_pips: 50                    # antes 70 → compromiso golden 40p vs ruido NY
+    max_sl_price_pct: 0.0015           # antes 0.0022 → 0.15% (~6.5$ en XAU 4500)
+    max_tp_pips: 90                    # antes 130 → cercano al golden 79.4p
+    max_tp_rr: 2.00                    # antes 2.20 → alineado al RR exitoso golden
+    # ml_thresholds: AURION X 4.3 (7-jun-2026) - RELAJADO un poco para que
+    # entre mas seguido. Historico: 0.58/0.62/0.66 -> bot opera muy poco.
+    # Nuevo: 0.54/0.58/0.62 -> mas oportunidades manteniendo seleccion.
+    # El ML XAUUSD ensemble (RF+LR+XGB+LGBM) genera senales ml=0.70-0.75
+    # de forma consistente, por lo que bajar 4 puntos no compromete edge.
+    ml_thresholds:
+      conservative: 0.62
+      normal: 0.58
+      aggressive: 0.54
+    # AJUSTE FINO (1-jun): bajados a 35/45 para destrabar señales scalper.
+    # Con SMC institucional + Knowledge Engine como capas adicionales de
+    # filtrado, no necesitamos score tan alto en el scalper base.
+    score_min_normal: 35
+    score_min_strong: 45
+    spread_high_points: 70
+    spread_extreme_points: 150
+    # AJUSTE FINO (1-jun): bajado a 120s (2 min) — el cooldown 240s se daba
+    # cuando había trades activos, pero con 0 trades en 24h era irrelevante.
+    min_seconds_between_entries: 120.0
+    # AURION X 4.3 (7-jun-2026): NY_LATE (17-21 UTC) era 66.7% WR en golden
+    # period y bajo a 10% WR reciente. Mantenemos LONDON + OVERLAP donde el
+    # bot historicamente performa mejor (52-62% WR), y NY (apertura, no late).
+    preferred_sessions: ["LONDON", "NEW_YORK", "OVERLAP_LONDON_NY"]
+    scalper:
+      min_bars: 24
+      volume_filter_enabled: false
+      # AJUSTE FINO (1-jun): umbrales scalper bajados ~25% para detectar más
+      # setups en momentos de menor volatilidad. El filtro de calidad real lo
+      # hace ahora el motor SMC institucional (score_modifier) + Knowledge.
+      min_ema_separation_ratio: 0.000060
+      min_momentum_pct: 0.000120
+      min_volume_ratio: 0.80
+      min_volume_score: 0.20
+      breakout_min_volume_ratio: 1.05
+      min_setup_momentum_score: 0.48
+      range_fade_lookback: 36
+      range_fade_min_width_pct: 0.000080
+      range_fade_max_width_pct: 0.0095
+      range_fade_edge_pct: 0.14
+      range_fade_buy_max_position: 0.25
+      range_fade_sell_min_position: 0.75
+      range_fade_sweep_tolerance: 0.12
+      range_fade_close_body_min: 0.34
+      range_fade_min_volume_ratio: 0.65
+      range_fade_sl_pips: 22
+      range_fade_tp_pips: 33
+      range_fade_confidence_boost: 0.06
+      sl_pips: 26
+      tp_pips: 46
+    # Ejemplo (descomentar): salida dinámica solo en XAU con giveback más estricto.
+    # dynamic_exit:
+    #   enabled: true
+    #   max_giveback_allowed: 0.28
+    #   trailing_atr_multiplier: 1.08
+
+  # AURION X 4.3 (7-jun-2026): perfiles NDX100/BTCUSD eliminados. Si en el
+  # futuro quieres reactivar multi-activo, restaura desde git history.
+
+telemetry:
+  enabled: true
+  interval_s: 120
+
+adaptive_learning:
+  enabled: true
+  # Más agresivo: cada 60s reevalúa pesos, mínimo 8 samples (antes 16) y mira
+  # 600 trades (antes 400) para captar más patrones por TF.
+  interval_s: 60
+  min_samples: 8
+  lookback_trades: 600
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FILTRO POR DÍA DE SEMANA
+# Domingo (6) y Lunes (0) son los días más volátiles e impredecibles.
+# - Domingo: mercado recién abierto, gaps, poca liquidez → NO operar.
+# - Lunes: alta volatilidad, reversals frecuentes → lote mínimo, umbrales altos.
+# - Martes-Viernes: operación normal.
+# ─────────────────────────────────────────────────────────────────────────────
+weekday_filters:
+  0:  # Lunes – RELAJADO 2026-05-31: el mercado en RANGE M5/M15 perpetuo
+       # bloqueaba todas las señales (require_mtf_full_align). Mantenemos
+       # protección con ml_threshold_increase moderado y lot_factor reducido.
+    enabled: true
+    lot_factor: 0.5               # 50% del lote normal (antes 30%)
+    ml_threshold_increase: 0.05   # +5% al umbral ML (antes +15%)
+    max_trades_per_symbol: 3      # hasta 3 entradas/símbolo (antes 1)
+    require_mtf_full_align: false # M5/M15 viven en RANGE: no podemos exigir alineación full
+    skip_setups: []               # sin bloqueo de setups (antes RANGE_FADE + RANGE_BREAKOUT_MOMENTUM)
+  1:  # Martes – operación completamente normal
+    enabled: true
+    lot_factor: 1.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 99
+    require_mtf_full_align: false
+    skip_setups: []
+  2:  # Miércoles – operación normal
+    enabled: true
+    lot_factor: 1.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 99
+    require_mtf_full_align: false
+    skip_setups: []
+  3:  # Jueves – operación normal
+    enabled: true
+    lot_factor: 1.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 99
+    require_mtf_full_align: false
+    skip_setups: []
+  4:  # Viernes – normal, pero precaución al cierre (volatilidad por cierre semanal)
+    enabled: true
+    lot_factor: 0.85
+    ml_threshold_increase: 0.04
+    max_trades_per_symbol: 99
+    require_mtf_full_align: false
+    skip_setups: []
+  5:  # Sábado – sin trading (mercado cerrado o muy ilíquido)
+    enabled: false
+    lot_factor: 0.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 0
+    require_mtf_full_align: true
+    skip_setups: ["ALL"]
+  6:  # Domingo – AURION X 4.3 (7-jun-2026): HABILITADO con FRENO FUERTE
+    # apertura de semana es peligrosa (gaps, baja liquidez), pero permitimos
+    # operar con lote reducido al 30% y umbral ML +8% para capturar setups
+    # AAA. Si vemos demasiados SL por gap, volver a enabled: false.
+    enabled: true
+    lot_factor: 0.30              # 30% del lote normal por riesgo de gap
+    ml_threshold_increase: 0.08   # +8% al umbral ML (mas selectivo aun)
+    max_trades_per_symbol: 1      # solo 1 entrada/simbolo en domingo
+    require_mtf_full_align: true  # exigir alineacion completa de timeframes
+    skip_setups: []               # sin bloqueo categorico de setups
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AURION X 4.0 HYBRID (modo evolución — flags OFF por defecto)
+#
+# Bloque aislado del 3.0: ningún módulo nuevo se activa sin habilitarlo aquí.
+# Justificación SLR PRISMA 2020 (Cutipa Mayhua & Vizcarra Ramos, 2026):
+#
+#   - statistical_gates: DSR (Bailey & López de Prado, 2014, doi:10.3905/jpm.2014.40.5.094)
+#                        + PBO (Bailey et al., 2016, doi:10.21314/JCF.2016.322).
+#   - training.cv_strategy: Purged K-Fold (López de Prado, 2018).
+#   - patchtst: Transformer atención sobre M1 (Nie et al., ICLR 2023).
+#   - drl_exit: PPO para gestión post-entrada (Schulman et al., 2017;
+#               Zhang, Zohren & Roberts, 2020, doi:10.3905/jfds.2020.1.031).
+#   - anomaly_autoencoder: Detección anomalías microestructura
+#                          (Poutré, Chételat & Morales, 2024, doi:10.1016/j.jfds.2024.100129).
+#   - gold_features: Variables exógenas oro-específicas (DXY, real yields,
+#                    gold/silver ratio, COT speculator).
+# ─────────────────────────────────────────────────────────────────────────────
+v4_hybrid:
+  enabled: true                  # ACTIVADO 2026-05-28: tras entrenar los 4 modelos.
+  symbol_focus: "XAUUSD"         # Restricción operativa: por ahora solo XAUUSD scalper.
+  strategy_focus: "scalper"
+  artifacts_dir: "D:/AURION_DATA/models"
+  reports_dir: "D:/AURION_DATA/reports"
+
+  statistical_gates:
+    enabled: true                # Aplica DSR+PBO en OOSValidator.should_promote.
+    min_dsr: 0.60
+    max_pbo: 0.30
+    pbo_partitions: 16
+    n_trials_default: 100
+    bars_per_year: 365 * 24 * 60
+    bars_per_year_value: 525600
+
+  training:
+    cv_strategy: "purged_kfold"  # v4: CV con embargo (López de Prado 2018).
+    purged_kfold_splits: 5
+    purged_kfold_embargo_pct: 0.02
+
+  patchtst:
+    enabled: true                # ACTIVADO: aporta señal complementaria al stacker.
+    model_path: "D:/AURION_DATA/models/patchtst_xauusd_v4.pt"
+    window_ticks: 256
+    patch_len: 16
+    n_patches: 16
+    n_channels: 5
+    d_model: 64
+    n_heads: 4
+    n_layers: 3
+    dropout: 0.15
+    weight_in_stacker: 0.30
+    fallback_on_nan: true        # si la ventana M1 no está lista → fallback ensemble.
+    max_latency_ms: 50
+    device: "auto"               # CUDA si disponible (RTX 5060 verificado).
+
+  meta_stacker:
+    enabled: true                # ACTIVADO con fallback_to_ensemble: true.
+    model_path: "D:/AURION_DATA/models/meta_stacker_xauusd_v4.pkl"
+    min_samples_to_fit: 200
+    fallback_to_ensemble: true   # Si el stacker no produce señal clara → ensemble 3.0.
+
+  drl_exit:
+    enabled: true                # ACTIVADO pero en shadow_mode (no actúa, sólo observa).
+    shadow_mode: true            # Cambiar a false sólo tras min_trades_in_shadow=200.
+    model_path: "D:/AURION_DATA/models/ppo_exit_xauusd_v4.zip"
+    device: "cpu"
+    state_dim: 18
+    action_dim: 5
+    reward:
+      action_penalty: 0.02
+      action_lambda: 0.10
+      drawdown_mu: 0.50
+      gamma: 0.99
+    promotion:
+      min_trades_in_shadow: 200
+      min_roi_uplift_pct: 15.0
+      max_dd_uplift_pct: 0.0
+    fallback_to_v3: true
+
+  anomaly_autoencoder:
+    enabled: true                # ACTIVADO: gate de pre-entrada (sólo bloquea).
+    model_path: "D:/AURION_DATA/models/anomaly_ae_xauusd_v4.pt"
+    threshold_path: "D:/AURION_DATA/models/anomaly_ae_xauusd_v4_threshold.json"
+    block_threshold: 0.80
+    block_cooldown_s: 90
+    input_features: 8
+    encoder_dims: [32, 16, 8]
+    dropout: 0.10
+
+  gold_features:
+    enabled: true                # ACTIVADO: features exógenas para XAUUSD.
+    feature_schema: "v3"
+    fred_api_key_env: "FRED_API_KEY"
+    cot_refresh_dow: 4
+    cot_refresh_hour_utc: 21
+    london_fix_times_utc: ["10:30", "15:00"]
+    central_bank_window_min: 60
+    cache_ttl_s:
+      dxy_zscore: 60
+      us10y_real_yield: 3600
+      vix_zscore: 60
+      gold_silver_ratio: 5
+      gold_oil_ratio: 5
+      cot_speculator_net_long: 86400
+      central_bank_event_proximity: 300
+      asia_session_intensity: 900
+      london_fix_proximity: 60
+
+# =============================================================================
+# AURION X 4.1 — Capa SMC institucional (Smart Money Concepts) — XAUUSD-only
+# =============================================================================
+#
+# Detección, scoring y persistencia de BOS / CHOCH / Order Blocks / FVG /
+# SSL+BSL / Liquidity Sweeps. La capa nunca BLOQUEA: sólo ajusta confidence y
+# setup_grade vía SMCAnalyzer.score_modifier. Si se desactiva (enabled=false)
+# todo el bot opera exactamente como antes (compatibilidad 100%).
+smc:
+  enabled: true
+  # Lista de símbolos para los que SE EVALÚA SMC. XAUUSD only por prompt.
+  enabled_symbols: ["XAUUSD"]
+  # TFs evaluados (en orden de jerarquía). MN1/M5/M1 se pueden añadir si se
+  # quiere contexto/timing extra, pero la confluencia los ignora por defecto.
+  timeframes: ["M15", "M30", "H1", "H4", "D1", "W1"]
+  # TF principal del oro (donde concentramos OB/BOS/CHOCH/FVG según prompt).
+  primary_timeframe: "M15"
+  # Cache: máx 1 recálculo cada N segundos por símbolo (TFs altos son caros).
+  cache_ttl_s: 8.0
+  # Persistir snapshots en PostgreSQL (tablas smc_*).
+  persist_snapshots: true
+  # ---- Pesos institucionales del prompt (% del score SMC, suman 70%; el 30%
+  # ---- restante corresponde al ML al combinarse con composite_score).
+  weights:
+    bos: 0.10
+    choch: 0.15
+    ob: 0.20
+    fvg: 0.15
+    liquidity: 0.10
+  # ---- Pesos por timeframe (escala Fibonacci del prompt).
+  fib_weights:
+    M1: 0.0
+    M5: 0.0
+    M15: 1.0
+    M30: 2.0
+    H1: 3.0
+    H4: 5.0
+    D1: 8.0
+    W1: 13.0
+    MN1: 0.0
+  # ---- Ajustes soft sobre la confianza efectiva del Orchestrator.
+  # +/- max_conf_delta sumado a effective_confidence según score_modifier.
+  # AURION X 4.2 — Calibrado contra backtest 12m (Jun25→Jun26, 5.7k evals SMC):
+  #   Distribución empírica de confluence M15: p50=0.31, p90=0.41, p95=0.45, p99=0.51.
+  #   Antes 0.70 era inalcanzable (top <1%); ahora 0.40 = top ~12% (setups premium reales).
+  #   Backtest a 0.38: WR 59%, PF 2.57, DD -1.95% (filtro principal).
+  #   Como aquí es SOFT BOOST (no filtro) podemos ser un pelín más exigentes (0.40).
+  max_conf_delta: 0.08          # subimos ligeramente el boost (0.06 → 0.08)
+  grade_bump_threshold: 0.40    # confluence >= 0.40 => +1 grade + boost max
+  grade_demote_threshold: 0.20  # confluence < 0.20 => -1 grade (raro: penalizamos solo eventos basura)
+  # ---- Knobs por timeframe (override de los defaults XAUUSD). Dejar vacío
+  # ---- para usar DEFAULT_TF_PARAMS_XAUUSD del módulo (recomendado).
+  tf_params: {}
+  # ---- Self-learning sobre trades cerrados vinculados a SMC.
+  self_learning:
+    enabled: true
+    lookback_trades: 400
+    min_samples_per_tf: 8
+    # Cada cuántos segundos recomputa agregados (winrate por TF, por bucket).
+    refresh_interval_s: 900
+  # ─────────────────────────────────────────────────────────────────────────
+  # AURION X 4.5 (11-jun-2026) — SMC DECISION ENGINE
+  # ─────────────────────────────────────────────────────────────────────────
+  # Filtro institucional SMC que actua ANTES de Institutional/Apex/Execution.
+  # Calcula SMC score 0-100 (BOS+CHOCH+OB+FVG+Liquidity+Confluencia),
+  # clasifica OB y FVG en grades A+/A/B/C/X, evalua Premium/Discount sobre
+  # rangos H4/D1/W1, valida MTF alignment H4-H1-M30-M15 y emite veredicto
+  # final con setup_grade y lot_multiplier.
+  #
+  # Filosofia: filtra setups mediocres y concentra entradas en estructuras
+  # institucionales fuertes. **No reemplaza nada** - actua como pre-filtro.
+  # Compatible 100% con Apex/Institutional/Quant/Auto-retrain/Ensemble.
+  #
+  # Para desactivarlo: decision_engine.enabled: false (el bot opera como
+  # antes, sin filtro SMC bloqueante).
+  decision_engine:
+    enabled: true
+    # Score minimo (0-100) para permitir la entrada. Por debajo: skip.
+    min_score_to_trade: 70.0
+    # Si true, exige al menos un SSL o BSL barrido reciente para entrar.
+    require_sweep: false
+    # Si true, exige H4+H1+M30+M15 alineados a la direccion. Muy restrictivo
+    # — solo en modo francotirador A+. Default false (basta con mtf_aligned>=2).
+    require_mtf_full_align: false
+    # Grade C requiere ml_conf >= este valor para ejecutarse.
+    c_grade_ml_override: 0.80
+    # Multiplicadores de lote por grade (factor aplicado al lot calculado).
+    grade_lot_multipliers:
+      "A+": 1.20    # agresividad maxima
+      "A":  1.00    # normal
+      "B":  0.50    # lote reducido
+      "C":  0.30    # casi simbolico, solo con ML alto
+      "X":  0.00    # prohibido (la entrada ya esta bloqueada)
+    # Configuracion del sub-modulo Premium/Discount.
+    premium_discount:
+      # Discount: pct_in_range <= 0.382 ; Premium: pct_in_range >= 0.618
+      discount_threshold: 0.382
+      premium_threshold: 0.618
+      # Ancho minimo del rango (relativo al precio) para considerarlo valido.
+      min_range_width_pct: 0.001
+      # Prioridad de TFs (H4 -> D1 -> W1) para encontrar el swing institucional.
+      tf_priority: ["H4", "D1", "W1"]
+    # ─────────────────────────────────────────────────────────────────
+    # AURION X 4.5.2 (11-jun-2026) - HEURISTICAS INSTITUCIONALES
+    # ─────────────────────────────────────────────────────────────────
+    # Reglas duras deterministas (no LLM) que ajustan el SMC score segun
+    # comportamiento institucional documentado de XAUUSD: killzones London/
+    # NY, Asian range trap, Friday close, round number magnet, equal H/L
+    # trap, post-event spike, weekend open, stale setups.
+    # Cada regla devuelve +bonus o -penalty al smc_score (0-100).
+    # Se persisten en features_json (heur_rules_applied) para que el ML
+    # aprenda que reglas correlacionan con trades ganadores.
+    heuristics:
+      enabled: true
+      # Multiplicador global. 1.0=default, 0.5=conservador, 1.5=agresivo.
+      weight: 1.0
+      # Lista de IDs a activar. Vacio/null = TODAS activas (recomendado).
+      # Opciones: R1_asian_trap, R2_london_killzone, R3_ny_open_killzone,
+      #   R4_ny_lunch_dead, R5_ny_close_revert, R6_friday_late_close,
+      #   R7_round_number_trap, R8_round_number_sweep, R9_equal_highs_lows,
+      #   R10_post_event_spike, R11_weekend_open, R12_stale_setup
+      rules: null
+    # ─────────────────────────────────────────────────────────────────
+    # AURION X 4.6 (12-jun-2026) — QUALITY MODE (filtro PREMIUM seccion 14)
+    # ─────────────────────────────────────────────────────────────────
+    # Tres modos de operacion:
+    #   normal       -> como hasta ahora (smc>=min_score, grade!=X). DEFAULT.
+    #   high_quality -> grade>=A + sweep + MTF aligned>=3 + RR>=2.5 + no news.
+    #                   ~50% menos trades, calidad alta.
+    #   premium_only -> grade=A+ + score>=85 + sweep + MTF=5/5 + OB>=A +
+    #                   FVG>=A + RR>=3.0 + volumen HIGH/EXTREME + no news.
+    #                   ~80-90% menos trades, solo setups perfectos.
+    # Para activar: cambiar a "high_quality" o "premium_only" SIN reiniciar
+    # el codigo (auto-reload de config).
+    quality_mode: "normal"
+    min_rr_high_quality: 2.5
+    min_rr_premium: 3.0
+
+# =============================================================================
+# AURION X 4.1 — XAU Knowledge Engine (aprendizaje continuo XAUUSD-only)
+# =============================================================================
+#
+# El motor NO reentrena modelos cada tick (eso degrada el rendimiento). En su
+# lugar:
+#   1) Observa pasivamente cada vela cerrada (TFs supervisados) y registra
+#      regime/trend/range/volatility/session/spread en `xau_market_memory`.
+#   2) Acumula memoria estructurada de patrones SMC, sesiones y regímenes.
+#   3) Dispara reentrenamientos del modelo XAUUSD aislado *sólo* bajo 4
+#      condiciones controladas: 10 trades cerrados, fin de día UTC,
+#      cambio fuerte de régimen, o degradación detectada (caída de winrate).
+#   4) Aplica pesos temporales 50/30/20 (últimos 6m / 6-12m / 12-36m) a las
+#      muestras de entrenamiento y ejecuta Walk-Forward Validation obligatorio.
+#   5) El artefacto resultante es `model_XAUUSD.pkl` AISLADO (BTCUSD/USTEC no
+#      contaminan el dataset porque el provider filtra `symbol=XAUUSD`).
+#
+# Si `enabled=false` el motor no se inicializa y el resto del bot opera igual.
+xau_knowledge:
+  enabled: true    # ACTIVADO 1-jun: aprendizaje continuo + MFE/MAE + regime memory
+  symbol: "XAUUSD"
+  observe_timeframes: ["M15", "M30", "H1", "H4", "D1"]
+  market_memory_flush_size: 64
+  # ─────────────────────────────────────────────────────────────────────────
+  # AURION X 4.4 (11-jun-2026) — APRENDIZAJE ACELERADO
+  # Antes: retrain cada 10 trades cerrados + EOD@23h + regime>=30m + drop>0.10
+  #        + min_interval 60min + window 20 trades
+  # Ahora: 5 trades cerrados (2x mas frecuente), regime>=15min (2x mas
+  #        reactivo), drop>0.07 (mas sensible), window 15 trades (mas reactiva),
+  #        min_interval 30min (2x mas retrains posibles por dia).
+  # ─────────────────────────────────────────────────────────────────────────
+  retrain_closed_trades_n: 5
+  retrain_end_of_day_utc_hour: 23
+  retrain_regime_change_min_duration_min: 15
+  retrain_degradation_winrate_drop: 0.07
+  retrain_degradation_window_trades: 15
+  retrain_min_interval_minutes: 30
+  # Modelo aislado XAUUSD
+  model_path: "D:/AURION_DATA/models/model_XAUUSD.pkl"
+  walk_forward_folds: 5
+  # Pesos temporales 70/22/8: enfasis fuerte en lo reciente (mercado XAU
+  # cambio mucho de comportamiento jun-2026 con la nueva estructura).
+  # Antes 50/30/20 daba demasiado peso a trades >6m que pueden ser ruido.
+  time_weights:
+    recent_6m:
+      max_age_days: 183.0
+      weight: 0.70
+    mid_6_12m:
+      max_age_days: 365.0
+      weight: 0.22
+    long_12_36m:
+      max_age_days: 1095.0
+      weight: 0.08

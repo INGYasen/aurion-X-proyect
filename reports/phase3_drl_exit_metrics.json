@@ -1,0 +1,58 @@
+{
+  "ts": "2026-06-01T00:30:27.910300+00:00",
+  "symbol": "XAUUSD",
+  "total_timesteps": 300000,
+  "n_trades_train": 174,
+  "n_trades_val": 20,
+  "history": [
+    {
+      "iter": 1.0,
+      "timesteps_done": 50000.0,
+      "win_rate": 1.0,
+      "zero_rate": 0.0,
+      "loss_rate": 0.0,
+      "avg_reward": -1.1684248120297032
+    },
+    {
+      "iter": 2.0,
+      "timesteps_done": 100000.0,
+      "win_rate": 1.0,
+      "zero_rate": 0.0,
+      "loss_rate": 0.0,
+      "avg_reward": -1.333251127819129
+    },
+    {
+      "iter": 3.0,
+      "timesteps_done": 150000.0,
+      "win_rate": 1.0,
+      "zero_rate": 0.0,
+      "loss_rate": 0.0,
+      "avg_reward": -1.3644421052627294
+    },
+    {
+      "iter": 4.0,
+      "timesteps_done": 200000.0,
+      "win_rate": 1.0,
+      "zero_rate": 0.0,
+      "loss_rate": 0.0,
+      "avg_reward": -1.1985398496237651
+    },
+    {
+      "iter": 5.0,
+      "timesteps_done": 250000.0,
+      "win_rate": 1.0,
+      "zero_rate": 0.0,
+      "loss_rate": 0.0,
+      "avg_reward": -1.3506390977439537
+    },
+    {
+      "iter": 6.0,
+      "timesteps_done": 300000.0,
+      "win_rate": 1.0,
+      "zero_rate": 0.0,
+      "loss_rate": 0.0,
+      "avg_reward": -0.9103195488720945
+    }
+  ],
+  "promoted": true
+}

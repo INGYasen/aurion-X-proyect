@@ -1,0 +1,30 @@
+# AURION X 4.0 HYBRID — dependencias adicionales sobre la base 3.0.
+#
+# IMPORTANTE — PyTorch CUDA según GPU:
+#   - NVIDIA Ampere/Ada (sm_80 / sm_86 / sm_89): usar wheels cu124 o cu126.
+#   - NVIDIA Hopper (sm_90, H100): usar wheels cu126 o cu128.
+#   - NVIDIA Blackwell (sm_120, RTX 50xx / RTX 5060): requiere cu130 (CUDA 13).
+#
+# Para máxima compatibilidad con la RTX 5060 Laptop (sm_120, verificada en
+# este proyecto) instalar PyTorch con CUDA 13:
+#
+#   pip install torch==2.12.0+cu130 --index-url https://download.pytorch.org/whl/cu130
+#   pip install -r requirements-v4.txt --extra-index-url https://pypi.org/simple
+#
+# Si tu GPU es Ampere/Ada (3060, 3090, 4060, 4080, 4090), usa:
+#
+#   pip install torch==2.12.0+cu126 --index-url https://download.pytorch.org/whl/cu126
+#   pip install -r requirements-v4.txt --extra-index-url https://pypi.org/simple
+#
+# Versiones verificadas (mayo 2026) en venv aislado D:\AURION_DATA\venv_v4
+# con Python 3.13.13:
+#   torch 2.12.0+cu130, gymnasium 1.2.3, stable-baselines3 2.8.0,
+#   scipy 1.17.1, pandas 3.0.3, pyarrow 24.0.0, requests 2.34.2.
+
+torch>=2.12,<3
+gymnasium>=1.2
+stable-baselines3>=2.8
+scipy>=1.11
+pandas>=2.1
+pyarrow>=15.0
+requests>=2.31

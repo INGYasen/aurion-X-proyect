@@ -1,0 +1,74 @@
+{
+  "ts": "2026-06-01T00:24:41.300480+00:00",
+  "symbol": "XAUUSD",
+  "months": 6,
+  "config": {
+    "window_len": 256,
+    "n_channels": 5,
+    "patch_len": 16,
+    "n_patches": 16,
+    "d_model": 64,
+    "n_heads": 4,
+    "n_layers": 3,
+    "dropout": 0.15,
+    "n_folds": 5,
+    "embargo_pct": 0.02,
+    "epochs": 20,
+    "batch_size": 256,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "patience": 10,
+    "device": "cuda"
+  },
+  "folds": [
+    {
+      "val_loss": 0.6929195523262024,
+      "val_accuracy": 0.5081211148987367,
+      "val_buy_rate": 0.896831762582715,
+      "n_train": 77800.0,
+      "n_val": 19948.0
+    },
+    {
+      "val_loss": 0.6930583119392395,
+      "val_accuracy": 0.5072187687988771,
+      "val_buy_rate": 0.3588830960497293,
+      "n_train": 75805.0,
+      "n_val": 19948.0
+    },
+    {
+      "val_loss": 0.6929067373275757,
+      "val_accuracy": 0.5098255464206938,
+      "val_buy_rate": 0.3784339282133547,
+      "n_train": 75805.0,
+      "n_val": 19948.0
+    },
+    {
+      "val_loss": 0.6929194927215576,
+      "val_accuracy": 0.5069179867655905,
+      "val_buy_rate": 0.40224583918187284,
+      "n_train": 75805.0,
+      "n_val": 19948.0
+    },
+    {
+      "val_loss": 0.6928589344024658,
+      "val_accuracy": 0.5124053932133728,
+      "val_buy_rate": 0.30920755851837,
+      "n_train": 77797.0,
+      "n_val": 19951.0
+    }
+  ],
+  "statistical_gates": {
+    "pass": true,
+    "reason": "ok",
+    "dsr_sr_raw_per_bar": 0.01779846433573993,
+    "dsr_sr_annualized": 12.903579769687736,
+    "dsr_expected_max_sr": 0.0038531713469883884,
+    "dsr_dsr": 0.9999946569081645,
+    "dsr_skew": -0.03559657178499493,
+    "dsr_kurt": 1.001247077194857,
+    "dsr_n_obs": 99743.0,
+    "dsr_n_trials": 5.0,
+    "pbo_skipped": 1.0
+  },
+  "promoted": true
+}

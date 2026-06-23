@@ -1,0 +1,5 @@
+2026-06-10 12:06:44,302 | INFO | analytics.db_connection | Motor PostgreSQL listo en postgresql://aurion:***@127.0.0.1:5432/aurionx (intento 1/1)
+2026-06-10 12:06:44,304 | INFO | analytics.db_connection | Base de datos: usando postgresql://aurion:***@127.0.0.1:5432/aurionx (failover desde lista de candidatos)
+2026-06-10 12:06:44,453 | INFO | analytics.db_connection | init_db: metadata sincronizado (create_all + SMC + XAU Knowledge)
+2026-06-10 12:06:44,464 | INFO | __main__ | Dashboard en http://127.0.0.1:8765
+2026-06-10 17:14:16,289 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)

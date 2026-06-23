@@ -1,0 +1,18 @@
+# Entornos virtuales y cachés (no subir a GitHub)
+venv_v4/
+pip_cache/
+torch_hub/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Secretos
+.env
+*.env
+
+# Temporales
+tmp/
+
+# Backups grandes (superan límite de 100MB de GitHub)
+backups/

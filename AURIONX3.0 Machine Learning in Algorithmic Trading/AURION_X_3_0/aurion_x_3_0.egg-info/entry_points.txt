@@ -1,0 +1,4 @@
+[console_scripts]
+aurion-dashboard = analytics.dashboard_server:run_dashboard
+aurion-train-model = core.train_model:main
+aurion-x = core.main:main

@@ -1,0 +1,665 @@
+symbols: ["XAUUSD", "NDX100", "BTCUSD"]
+
+app:
+  # live: avisos si la configuración es laxa; alineado con filtros y riesgo más exigentes abajo.
+  environment: live
+
+# Fusión ML + stack M1–H1: sube score y confianza cuando mercado y modelo van en la misma dirección.
+edge_fusion:
+  enabled: true
+  mtf_stack_bonus: 14
+  ml_prob_aligned_boost: 0.04
+  # Solo fusionar cuando el modelo va bastante seguro con la dirección.
+  ml_prob_min: 0.60
+
+strategy:
+  scalper:
+    # SL/TP base en "pips" del símbolo (XAU pip=0.1, NDX100/BTC pip=1.0). El orquestador aplica suelos/topos ATR.
+    sl_pips: 20
+    tp_pips: 42
+    # Con ticks en vivo, M1 crece ~1 vela/min; min_bars+1 velas totales hacen falta antes de evaluar scalper.
+    min_bars: 16
+    min_setup_momentum_score: 0.34
+    min_ema_separation_ratio: 0.000034
+    min_momentum_pct: 0.000075
+    # MT5 suele devolver volumen tick en 0 → el filtro anula casi todo el scalper.
+    volume_filter_enabled: false
+    volume_lookback: 20
+    min_volume_ratio: 0.95
+    min_volume_score: 0.32
+    breakout_min_volume_ratio: 1.08
+    range_breakout_min_momentum_score: 0.62
+    range_breakout_momentum_factor: 0.88
+    range_fade_enabled: true
+    range_fade_lookback: 30
+    range_fade_min_width_pct: 0.00004
+    range_fade_max_width_pct: 0.007
+    range_fade_edge_pct: 0.20
+    range_fade_close_body_min: 0.22
+    range_fade_sweep_tolerance: 0.16
+    range_fade_buy_max_position: 0.38
+    range_fade_sell_min_position: 0.62
+    range_fade_sl_pips: 13
+    range_fade_tp_pips: 20
+    range_fade_confidence_boost: 0.10
+    use_micro_structure_sl: true
+    micro_swing_lookback: 8
+    micro_swing_buffer_frac: 0.000015
+    micro_sl_atr_floor_mult: 0.55
+  structure:
+    conflict_resolve_bars: 18
+    conflict_min_net_return_pct: 0.06
+    momentum_fallback_bars: 22
+    momentum_min_return_pct: 0.32
+  impulse_log:
+    enabled: true
+    timeframe: H4
+    min_leg_return_pct: 3.0
+    max_legs: 6
+    log_interval_s: 900
+    exclude_forming_bar: true
+  # Intradía: calidad sobre cantidad (M15 + M1, filtros estrictos en el motor).
+  intraday:
+    min_m1_bars: 55
+    break_buffer: 0.00011
+    sl_buffer: 0.00012
+    tp_rr: 1.85
+    max_sl_range_frac: 0.50
+    break_extension_mult: 1.35
+    min_ema_separation_ratio: 0.000048
+    require_m1_bias_align: true
+    min_breakout_body_ratio: 0.58
+    min_bar_momentum_pct: 0.00004
+    enable_pullback_entries: false
+    pullback_min_body_ratio: 0.66
+    min_structure_key_levels: 3
+    use_structure_tp_zone: true
+    tp_zone_buffer_frac: 0.000018
+    tp_zone_min_rr: 1.15
+
+ml:
+  enabled: true
+  model_path: "D:/AURION_DATA/models/model.pkl"
+  walk_forward_enabled: true
+  walk_forward_min_samples: 60
+  walk_forward_train_ratio: 0.65
+  walk_forward_val_ratio: 0.15
+  auto_retrain_enabled: true
+  # Al arrancar: entrena desde PostgreSQL si falta el PKL o bootstrap_force_on_start=true
+  bootstrap_on_start: true
+  bootstrap_min_closed_trades: 30
+  bootstrap_force_on_start: false
+  auto_retrain_min_closed_trades: 5
+  auto_retrain_every_closed_trades: 5
+  feature_schema: v2
+  auto_retrain_limit: 5000
+  auto_retrain_batch: true
+  auto_retrain_min_interval_s: 180
+  threshold: 0.44
+  adaptive_threshold_floor: 0.22
+  disabled_threshold_relax: 0.14
+  disabled_confidence_boost: 0.12
+  # Tope de umbral cuando ML está off (evita que sniper/online suban demasiado el bar).
+  disabled_max_threshold_cap: 0.32
+  # Si ML está muy seguro en la dirección contraria a la señal, bloquea la entrada.
+  veto_contradictions: true
+  # Solo vetar con confianza alta (evita bloqueos por modelo desactualizado o ruido).
+  # Subido de 0.78 → 0.82: combinado con `veto_min_gap` evita matar entradas
+  # cuando ml_conf alta proviene de probabilidades casi empatadas (0.50/0.50).
+  veto_confidence: 0.82
+  # Gap mínimo |prob_buy − prob_sell| para que el veto se aplique. Filtra empates
+  # donde el "ml_dir" mayoritario es ruido marginal frente a la señal de estrategia.
+  veto_min_gap: 0.12
+  # Pesos de entrenamiento ~ 1+|R| (cap 3) para enfatizar trades con resultado grande.
+  training_sample_weight_by_r: true
+  # Hueco temporal train→val en walk-forward (reduce fuga de información).
+  walk_forward_embargo_ratio: 0.02
+  # Etiqueta: win_loss (profit>0) o r_quality (R >= min_r_for_positive).
+  label_mode: win_loss
+  min_r_for_positive: 0.25
+  # Calibración Platt / isotónica sobre holdout temporal; none para desactivar.
+  calibration_method: sigmoid
+  calibration_holdout_ratio: 0.15
+  # En volatilidad EXTREME, los fades al rango suelen fallar; no abrir (override de impulso tampoco aplica).
+  # Relajado a false: con ML strong+Apex como red de seguridad, los range_fade en EXTREME
+  # pueden ser rentables (mean-reversion en chop). Apex sigue siendo el último filtro.
+  skip_range_fade_on_extreme_vol: false
+  # Suma al umbral ML cuando el régimen es EXTREME (todas las entradas restantes).
+  # Bajado de 0.17 a 0.05: con threshold base 0.38 y EXTREME muy frecuente,
+  # cualquier add alto dejaba ml_thr en 0.55+ y bloqueaba ml=0.60-0.70.
+  extreme_vol_ml_threshold_add: 0.05
+  # EXTREME + breakout con M5 aún en rango: exige un poco más de confianza (reduce rachas en chop).
+  extreme_range_breakout_m5_range_ml_threshold_add: 0.04
+  # Tope absoluto del umbral ML adaptativo por modo. Limita la suma de biases
+  # (institutional + adaptive_perf + bucket + online + weekday + extreme_add)
+  # para que no asfixie la operativa cuando el modelo está aprendiendo.
+  # Antes el threshold final llegaba a 0.71 en CONSERVATIVE rechazando ml=0.70.
+  # Relajado (0.50→0.46 / 0.46→0.42 / 0.42→0.38): los logs muestran que el
+  # cap antiguo bloqueaba conf=0.50 contra umbral=0.50 (igual) sistemáticamente
+  # en modo CONSERVATIVE. Mantenemos margen frente al floor (0.22) y la red
+  # institucional + apex como filtros de calidad.
+  adaptive_threshold_caps:
+    conservative: 0.46
+    normal: 0.42
+    aggressive: 0.38
+  # Modelo ML solo para RANGE_FADE (opcional). Cadena vacía = no cargar.
+  range_model_path: ""
+  # Filtro de dataset al entrenar: all | range | momentum (ver features_json.ml_dataset_context).
+  train_dataset_context: all
+  # Opcional: filtro distinto en auto-retrain; si se omite, el Trainer usa train_dataset_context.
+  # auto_retrain_dataset_context: all
+
+# Motor cuantitativo auto-adaptativo (ensemble + self-learning + daily retrain)
+quant_ml:
+  enabled: true
+  use_extended_features: true
+  use_ensemble: true
+  models_dir: "D:/AURION_DATA/models"
+  memory_path: "D:/AURION_DATA/memory/trade_memory.json"
+  ml_decision_weight: 0.65
+  min_structural_score: 28
+  # Auto-entreno más agresivo: cada 5 trades cerrados (antes 10), cooldown
+  # 180s (antes 300s), self-learning cada 60s (antes 120) con menos samples.
+  # Esto permite que el modelo aprenda en cada timeframe en tiempo real.
+  retrain_every_closed_trades: 3
+  retrain_min_interval_s: 120
+  daily_retrain_utc_hour: 22
+  self_learn_interval_s: 45
+  self_learn_min_samples: 6
+  self_learn_lookback: 800
+  confidence_ml_weight: 0.45
+  confidence_probability_weight: 0.25
+  confidence_quality_weight: 0.15
+  confidence_institutional_weight: 0.10
+  confidence_execution_weight: 0.05
+  retrain_min_symbol_trades: 12
+  memory_recency_half_life_days: 14
+  oos_validation:
+    min_expectancy: -0.05
+    max_oos_drawdown_pct: 12.0
+    min_sharpe: -0.5
+    max_overfitting: 0.35
+    min_rank_improve: 0.002
+  symbol_models:
+    use_per_symbol_dirs: true
+    sync_legacy_deploy: true
+
+# Capa institucional (tablas PG dedicadas, ranking, funded mode, exit AI)
+institutional:
+  enabled: true
+  min_setup_grade: C
+  defensive_dd_pct: 4.0
+  optimizer_min_samples: 12
+  exec_quality_window: 80
+  asset_decision_weights:
+    XAUUSD: 0.68
+    NDX100: 0.62
+    BTCUSD: 0.60
+  fundingpips:
+    enabled: true
+    adaptive_mode: true
+    max_daily_dd_pct: 4.0
+    max_total_dd_pct: 8.0
+    max_trades_per_day: 18
+    max_trades_per_hour: 6
+    # Subido de 5 → 7: revenge guard se activaba con rachas que incluían trades
+    # BROKER_SYNC contaminando el contador. Ahora que risk_manager excluye
+    # BROKER_SYNC, una racha real de 7 sigue siendo señal clara de pausa.
+    block_after_consecutive_losses: 7
+    min_minutes_between_entries: 2.0
+    impulsive_score_max: 42
+  consistency:
+    enabled: true
+    max_daily_profit_pct: 2.2
+    target_daily_profit_pct: 0.75
+    reduce_after_green_day: true
+
+# Capa Apex: microestructura, estado latente, meta-riesgo, RL, jerarquía de decisión
+apex:
+  enabled: true
+  latent_states: 6
+  max_entries_per_hour: 6
+  max_signals_per_10min: 12
+  min_entry_spacing_s: 90
+  exec_intel_window: 120
+  exec_block_threshold: 0.32
+  evolution_min_samples: 15
+  rl_learning_rate: 0.10
+  rl_memory_path: "D:/AURION_DATA/ml/rl_policy.json"
+  # Umbrales ML/Hyper: relajados para activar el bot con ml=0.65-0.70 y
+  # hyper=0.45-0.55 (chop frecuente). El ml_strong_override sigue siendo el
+  # mecanismo de seguridad para no operar contra estructura.
+  ml_threshold_base: 0.36
+  ml_strong_threshold: 0.55
+  hyper_min_score: 0.25
+  hyper_cold_start_min: 0.15
+  meta_risk:
+    defensive_dd_pct: 3.5
+    aggressive_winrate: 0.56
+    bad_winrate: 0.38
+
+risk:
+  # Endurecido (1.10 → 0.95): al permitir más entradas válidas con los nuevos
+  # bypass/cap relajados, conviene reducir el riesgo por trade para que el
+  # equity-at-risk total no crezca y el "x2" venga de frecuencia de calidad,
+  # no de leverage por operación.
+  risk_per_trade: 0.95
+  max_dd_pause: 5
+  max_dd_stop: 8
+  correlation_groups:
+    - ["XAUUSD", "NDX100"]
+  # Permitir 2 posiciones simultáneas en el grupo oro+índice (oro y NDX se mueven a menudo en sentidos opuestos
+  # cuando hay risk-off; antes el bot perdía operaciones válidas en NDX100 por bloqueo del slot por XAUUSD).
+  max_open_per_correlation_group: 2
+  intraday_kill_switch:
+    enabled: true
+    window_trades: 22
+    min_trades: 14
+    bad_winrate: 0.26
+    bad_avg_r: -0.32
+    require_both: true
+    cooldown_s: 1800
+  risk_pct_min: 0.40
+  risk_pct_max: 2.50
+  # Aperturas nuevas por día (RiskManager). 0 = sin límite (solo drawdown, racha y riesgo por trade).
+  max_entries_per_day: 0
+  # Topes de posiciones abiertas según el libro interno (0 = sin límite). Evita ráfagas de muchas entradas a la vez.
+  # 3 símbolos × 1 posición/símbolo como máximo operativo simultáneo.
+  max_open_positions_total: 3
+  max_open_positions_per_symbol: 1
+  max_consecutive_losses: 15
+  # true = tras agotar el cooldown por racha, se resetea el contador.
+  # Sin esto, una vez activada la pausa (15 pérdidas reales), el bot quedaba
+  # bloqueado hasta cambio de día UTC. Con el reset post-cooldown se reanuda
+  # operativa pero con lote reducido por el FundingPipsGuard (lot_cap 0.70 si
+  # consecutive_losses>=2) hasta encadenar ganadoras.
+  loss_streak_reset_after_cooldown: true
+  # Kill-switch por símbolo: si el PnL realizado del día (UTC) cae por debajo de -max_loss_money, no abre más.
+  symbol_daily_loss:
+    enabled: true
+    max_loss_money: 120.0
+
+execution:
+  # Alineación del libro interno con MT5 (segundos; 0 = solo al arranque vía start).
+  reconcile_positions_interval_s: 30
+  # Antes de cada nueva entrada: sincroniza con MT5 para que el tope por activo sea real (evita 3× el mismo segundo).
+  reconcile_before_new_entry: true
+  # Exige que el scalper no vaya contra la tendencia H4 (crítico en oro/índices en 4H).
+  scalper_require_h4_alignment: true
+  # Vol EXTREME + M5 en rango: bloquea scalper tipo momentum/breakout (deja RANGE_FADE_REVERSAL sujeto a otros filtros).
+  # Evita rachas de operaciones cortas en chop como en el historial MT5 (calidad > cantidad).
+  # Relajado a false para permitir entradas en EXTREME+M5:RANGE cuando ML respalda (Apex sigue como red de seguridad).
+  skip_scalper_extreme_m5_range: false
+  # Bloquea scalper momentum/breakout en contra de H1/H4 claros (menos “fade” contra macro).
+  # Relajado a false: con HTF en RANGE (chop) este filtro corta señales válidas; Apex sigue filtrando.
+  block_scalper_counter_htf: false
+  # SL mínimo en "pips" de precio = ATR(M1) del feature / pip_size × factor (absorbe ruido en BTC/XAU).
+  min_sl_atr_m1_mult: 1.0
+  # Tope de SL en múltiplos de ATR(M1) (evita stops demasiado amplios; protege margen).
+  max_sl_atr_m1_mult: 1.75
+  # Tope global: distancia SL ≤ este % del precio de entrada (0.0012 = 0.12%).
+  max_sl_price_pct: 0.0012
+  legacy_sl_contamination_threshold_pct: 0.0022
+  min_tp_rr_after_sl_floor: 1.22
+  # Tope de RR tras tp_hunter (scalper / intradía).
+  max_tp_rr: 2.25
+  max_tp_rr_intraday: 2.45
+  # Cuenta posiciones abiertas en el bróker además del libro interno (max(internal, broker)).
+  enforce_broker_position_caps: true
+  order_magic: 300000
+  reconcile_filter_magic: true
+  # Equity desde MT5 (recomendado): el sizing usa el patrimonio real, no solo el valor fijo de `equity:` arriba.
+  use_live_equity: true
+  # Lote mínimo bróker; el PositionSizer ya no exige el lote "tabla" como mínimo (evitaba abrir con riesgo bajo).
+  min_lot: 0.01
+  # Suelo de score tras penalizaciones (spread/vol/M15); sube la tasa de aprobación sin tocar la señal.
+  entry_score_floor: 34
+  # Log INFO justo antes de order_send (ver intentos aunque el bróker rechace).
+  log_trade_attempts: true
+  # Con BTC 24/7, desactivado; para solo índices/oro en sesión europea/USA, pon true y ajusta horas.
+  session_filter_enabled: false
+  session_timezone: UTC
+  session_start: "07:00"
+  session_end: "22:00"
+  cooldown_sec: 75
+  ignore_spread: false
+  spread_max_points: 320
+  spread_high_points: 130
+  spread_extreme_points: 255
+  score_min_normal: 26
+  score_min_strong: 38
+  atr_spike_enabled: false
+  atr_spike_threshold: 8.0
+  atr_min_samples: 400
+  # Baja el “ruido” en vivo: menos reevaluaciones por segundo.
+  tick_poll_interval_s: 0.20
+  # Ciclo de decisión por símbolo (ms); más bajo = más reacción (más CPU).
+  decision_interval_ms: 1500
+  mtf_trends_cache_ttl_s: 0.0
+  mtf_max_bars: 500
+  mtf_entry_min_support: 2
+  mtf_allow_when_all_entry_range: true
+  # Si ml_conf >= este umbral y existe un timeframe corto (M1/M5/H1) a favor sin que H4/D1 contradigan,
+  # se permite la entrada aunque _mtf_allows() la haya bloqueado. Apex/Hyper siguen como red de seguridad.
+  # Bajado de 0.80 → 0.74 para activar el override en señales ml_conf 0.74–0.80
+  # (rango habitual con el modelo entrenado en demo).
+  mtf_ml_strong_override_th: 0.74
+  # Si el régimen es EXTREME con volScore=0 y volRatio=0 (broker reporta tick_volume=0),
+  # solo bloquea entradas RANGE_BREAKOUT/MICRO_PULLBACK/RANGE_FADE si ml_conf < este umbral
+  # Y no hay ml_strong_mtf_override activo. Antes era 0.65 hard-coded.
+  extreme_no_volume_ml_strong_th: 0.58
+  structure_timeframe: M15
+  relax_structure_range_when_mtf_aligned: true
+  skip_mtf_filter: false
+  lenient_extreme_volatility: false
+  entry_validator:
+    allow_low_vol_breakout_when_mtf_aligned: true
+    allow_extreme_when_mtf_aligned: true
+    # Activado: con MTF validado por orchestrator, no rechazar señales scalper
+    # contra-tendencia M15 si el setup es BREAKOUT/MOMENTUM/MICRO_PULLBACK/RANGE_*.
+    # Antes este flag estaba en false y generaba bloqueos masivos por
+    # "validador rechaza (sin alineación con tendencia)".
+    scalper_ignore_structure_trend: true
+    # Si el orquestador activó ml_strong_override (ml_conf alto + alineación short-term
+    # + sin contradicción macro), permitir entrada contra-tendencia M15 en cualquier
+    # setup. Apex/Hyper y caps de SL siguen como filtros finales.
+    allow_against_trend_when_ml_strong: true
+    relax_range_when_mtf_aligned: true
+  ny_turbo:
+    # Ventana por defecto (NY) para símbolos sin ``symbol_windows``. BTC usa ventana propia más corta.
+    enabled: true
+    symbols: ["XAUUSD", "NDX100", "BTCUSD"]
+    start: "09:35"
+    end: "11:30"
+    symbol_windows:
+      BTCUSD:
+        # Solo solape Europa→NY en hora NY (menos chop 24/7 en cripto).
+        start: "08:00"
+        end: "12:30"
+  tp_hunter:
+    enabled: true
+    impulse_mult: 1.12
+    impulse_strong_mult: 1.18
+    low_vol_mult: 0.92
+    min_rr: 1.15
+    # Tope de RR tras tp_hunter (scalper / intradía); alineado con max_tp_rr del bloque execution.
+    max_rr: 2.25
+    max_rr_intraday: 2.45
+  chart_hints:
+    enabled: true
+    require_trade_ready: true
+    min_confidence: 0.40
+    # Menos reescrituras del CSV si la señal no cambia de vela M1 / conf redondeada.
+    dedupe_by_m1_bar: true
+    confidence_round_decimals: 3
+    # Solo hints con score mínimo (menos ruido en CSV/MT5).
+    min_score: 28
+    write_interval_ms: 400
+    path: "D:/AURION_DATA/hints/aurion_live_hints.csv"
+  spread_guard:
+    enabled: true
+    lookback_ticks: 30
+    spike_mult: 2.2
+    max_points: 280
+  sniper:
+    enabled: true
+    dead_hours_utc: []
+    require_learning_whitelist: false
+    learning_timezone: "America/New_York"
+    min_samples_per_bucket: 24
+    min_expectancy_r: 0.05
+    min_winrate: 0.48
+    allow_strong_impulse_override: true
+    online_min_samples: 16
+    online_bad_expectancy_r: -0.20
+    online_good_expectancy_r: 0.10
+    online_good_winrate: 0.52
+  entry_skip_log_interval_s: 45
+  # Evita varios envíos seguidos en el mismo símbolo (mismo chop / requotes). 0 = desactivado.
+  # Además del tope 1 entrada por vela M1 (en código), exige un cooldown real por símbolo.
+  min_seconds_between_entries_per_symbol: 180.0
+  # Gestión en vivo de trades RANGE_FADE (TP parcial antes del extremo opuesto).
+  range_trade_management:
+    partial_tp_enabled: true
+    partial_tp_at_r: 0.42
+    partial_tp_fraction: 0.56
+  # Trades INTRADAY_*: ajuste de SL según recorrido hacia el TP (30% aprieta, 50% break-even).
+  intraday_trade_management:
+    enabled: true
+    tighten_from_tp_progress: 0.30
+    breakeven_at_tp_progress: 0.50
+    be_buffer_pips: 2.0
+  # Scalper / momentum (no INTRADAY): sube tp_pips en strategy.scalper; aquí se blinda ~50% del mejor recorrido (MFE) hacia el TP.
+  scalper_trade_management:
+    enabled: true
+    arm_at_tp_progress: 0.35
+    lock_max_favorable_excursion_frac: 0.50
+    breakeven_floor_at_tp_progress: 0.50
+    be_buffer_pips: 2.0
+  # Salida dinámica (momentum, absorción, compresión, BE inteligente, trailing ATR). false = BE 0.3R / trail 0.7R legado.
+  dynamic_exit:
+    enabled: false
+    momentum_loss_threshold: 0.38
+    secure_profit_r: 0.45
+    breakeven_r: 0.5
+    partial_close_percent: 40.0
+    trailing_atr_multiplier: 1.15
+    trailing_arm_r: 0.55
+    absorption_strength_threshold: 0.55
+    compression_threshold: 0.72
+    max_giveback_allowed: 0.35
+    min_trail_improve_pips: 1.0
+
+# Calidad de rango M1 (chop vs operable, centro prohibido, absorción mínima en scalper RANGE).
+range_quality:
+  enabled: true
+  center_deadband_low: 0.38
+  center_deadband_high: 0.62
+  min_range_score: 44.0
+  max_chop_score: 54.0
+  breakout_watch_min: 64.0
+  skip_fade_on_breakout_watch: true
+  min_absorption_edge: 0.30
+  touch_zone_frac: 0.06
+  min_rejections: 1
+
+volatility:
+  window: 200
+  low_cv: 0.00005
+  high_cv: 0.00042
+  extreme_cv: 0.0095
+
+asset_profiles:
+  # pip_value_per_lot: USD aproximado de pérdida por 1.0 pip de precio y 1.0 lote (ajusta a tu bróker).
+  # Opcional: ml_model_path por activo sobreescribe el PKL global en inferencia para ese símbolo.
+  # Opcional: dynamic_exit por símbolo fusiona claves sobre execution.dynamic_exit (p. ej. enabled: true solo en oro).
+  XAUUSD:
+    ml_decision_weight: 0.68
+    min_setup_grade_aggressive: A
+    ml_weights:
+      liquidity_sweep: 1.45
+      absorption: 1.35
+      manipulation: 1.30
+      volatility: 1.25
+    ml_model_path: "D:/AURION_DATA/models/model_XAUUSD.pkl"
+    pip_value_per_lot: 1.0
+    min_sl_pips: 18
+    max_sl_pips: 32
+    max_sl_price_pct: 0.0011
+    max_tp_pips: 72
+    max_tp_rr: 2.2
+    ml_thresholds:
+      conservative: 0.31
+      normal: 0.27
+      aggressive: 0.23
+    score_min_normal: 28
+    score_min_strong: 40
+    spread_high_points: 95
+    spread_extreme_points: 210
+    # Misma pausa que el global reforzado (evita dobles en chop).
+    min_seconds_between_entries: 180.0
+    scalper:
+      min_bars: 24
+      volume_filter_enabled: false
+      min_ema_separation_ratio: 0.000022
+      min_momentum_pct: 0.000050
+      min_volume_ratio: 0.90
+      min_volume_score: 0.28
+      breakout_min_volume_ratio: 1.05
+      min_setup_momentum_score: 0.34
+      range_fade_lookback: 36
+      range_fade_min_width_pct: 0.000038
+      range_fade_max_width_pct: 0.0095
+      range_fade_edge_pct: 0.18
+      range_fade_buy_max_position: 0.36
+      range_fade_sell_min_position: 0.64
+      range_fade_sweep_tolerance: 0.14
+      range_fade_close_body_min: 0.22
+      range_fade_min_volume_ratio: 0.72
+      range_fade_sl_pips: 19
+      range_fade_tp_pips: 26
+      range_fade_confidence_boost: 0.10
+      sl_pips: 20
+      tp_pips: 44
+    # Ejemplo (descomentar): salida dinámica solo en XAU con giveback más estricto.
+    # dynamic_exit:
+    #   enabled: true
+    #   max_giveback_allowed: 0.28
+    #   trailing_atr_multiplier: 1.08
+
+  NDX100:
+    ml_decision_weight: 0.62
+    min_setup_grade_aggressive: A
+    ml_weights:
+      momentum: 1.45
+      displacement: 1.40
+      trend: 1.30
+    ml_model_path: "D:/AURION_DATA/models/model_NDX100.pkl"
+    pip_value_per_lot: 0.2
+    min_sl_pips: 22
+    max_sl_pips: 42
+    max_sl_price_pct: 0.0010
+    max_tp_pips: 88
+    max_tp_rr: 2.25
+    ml_thresholds:
+      conservative: 0.33
+      normal: 0.27
+      aggressive: 0.23
+    score_min_normal: 29
+    score_min_strong: 42
+    min_seconds_between_entries: 180.0
+    scalper:
+      min_bars: 24
+      volume_filter_enabled: false
+      min_ema_separation_ratio: 0.000030
+      min_momentum_pct: 0.000060
+      min_setup_momentum_score: 0.34
+      breakout_min_volume_ratio: 1.06
+      range_fade_lookback: 32
+      sl_pips: 26
+      tp_pips: 54
+
+  BTCUSD:
+    ml_decision_weight: 0.60
+    min_setup_grade_aggressive: B
+    ml_weights:
+      volatility: 1.50
+      fake_breakout: 1.40
+      displacement: 1.35
+    ml_model_path: "D:/AURION_DATA/models/model_BTCUSD.pkl"
+    pip_value_per_lot: 0.05
+    ml_thresholds:
+      conservative: 0.35
+      normal: 0.29
+      aggressive: 0.24
+    score_min_normal: 34
+    score_min_strong: 46
+    spread_high_points: 40
+    spread_extreme_points: 100
+    min_sl_pips: 40
+    max_sl_pips: 65
+    max_sl_price_pct: 0.0012
+    max_tp_pips: 115
+    max_tp_rr: 2.2
+    # Pausa larga en cripto 24/7 (menos overtrading).
+    min_seconds_between_entries: 240.0
+    preferred_sessions: ["LONDON", "NEW_YORK", "OVERLAP_LONDON_NY", "ASIA"]
+    scalper:
+      min_bars: 24
+      volume_filter_enabled: false
+      min_ema_separation_ratio: 0.000042
+      min_momentum_pct: 0.000080
+      min_setup_momentum_score: 0.34
+      breakout_min_volume_ratio: 1.08
+      sl_pips: 48
+      tp_pips: 92
+
+telemetry:
+  enabled: true
+  interval_s: 120
+
+adaptive_learning:
+  enabled: true
+  # Más agresivo: cada 60s reevalúa pesos, mínimo 8 samples (antes 16) y mira
+  # 600 trades (antes 400) para captar más patrones por TF.
+  interval_s: 60
+  min_samples: 8
+  lookback_trades: 600
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FILTRO POR DÍA DE SEMANA
+# Domingo (6) y Lunes (0) son los días más volátiles e impredecibles.
+# - Domingo: mercado recién abierto, gaps, poca liquidez → NO operar.
+# - Lunes: alta volatilidad, reversals frecuentes → lote mínimo, umbrales altos.
+# - Martes-Viernes: operación normal.
+# ─────────────────────────────────────────────────────────────────────────────
+weekday_filters:
+  0:  # Lunes – muy volátil, solo operar si la señal es excepcional
+    enabled: true
+    lot_factor: 0.3          # 30% del lote normal
+    ml_threshold_increase: 0.15   # +15% al umbral ML → solo señales muy sólidas
+    max_trades_per_symbol: 1      # máximo 1 entrada por símbolo en todo el día
+    require_mtf_full_align: true  # exigir alineación M1+M5+M15 en lugar de M1+M5
+    skip_setups: ["RANGE_FADE", "RANGE_BREAKOUT_MOMENTUM"]  # setups de alto riesgo bloqueados
+  1:  # Martes – operación completamente normal
+    enabled: true
+    lot_factor: 1.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 99
+    require_mtf_full_align: false
+    skip_setups: []
+  2:  # Miércoles – operación normal
+    enabled: true
+    lot_factor: 1.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 99
+    require_mtf_full_align: false
+    skip_setups: []
+  3:  # Jueves – operación normal
+    enabled: true
+    lot_factor: 1.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 99
+    require_mtf_full_align: false
+    skip_setups: []
+  4:  # Viernes – normal, pero precaución al cierre (volatilidad por cierre semanal)
+    enabled: true
+    lot_factor: 0.85
+    ml_threshold_increase: 0.04
+    max_trades_per_symbol: 99
+    require_mtf_full_align: false
+    skip_setups: []
+  5:  # Sábado – sin trading (mercado cerrado o muy ilíquido)
+    enabled: false
+    lot_factor: 0.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 0
+    require_mtf_full_align: true
+    skip_setups: ["ALL"]
+  6:  # Domingo – apertura de mercado, extremadamente peligroso → NO operar
+    enabled: false
+    lot_factor: 0.0
+    ml_threshold_increase: 0.0
+    max_trades_per_symbol: 0
+    require_mtf_full_align: true
+    skip_setups: ["ALL"]

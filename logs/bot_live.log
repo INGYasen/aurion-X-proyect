@@ -1,0 +1,300 @@
+2026-06-11 16:23:28,935 | INFO | __main__ | Iniciando AURION X 3.0
+2026-06-11 16:23:28,962 | INFO | core.orchestrator | Orchestrator inicializado
+2026-06-11 16:23:28,994 | INFO | core.orchestrator | load_config: claves top-level=['app', 'equity', 'ml', 'execution', 'risk', 'symbols', 'edge_fusion', 'strategy', 'quant_ml', 'institutional', 'apex', 'range_quality', 'volatility', 'asset_profiles', 'telemetry', 'adaptive_learning', 'weekday_filters', 'v4_hybrid', 'smc', 'xau_knowledge']
+2026-06-11 16:23:29,078 | INFO | analytics.db_connection | Motor PostgreSQL listo en postgresql://aurion:***@127.0.0.1:5432/aurionx (intento 1/1)
+2026-06-11 16:23:29,078 | INFO | analytics.db_connection | Base de datos: usando postgresql://aurion:***@127.0.0.1:5432/aurionx (failover desde lista de candidatos)
+2026-06-11 16:23:29,164 | INFO | analytics.db_connection | init_db: metadata sincronizado (create_all + SMC + XAU Knowledge)
+2026-06-11 16:23:29,165 | INFO | __main__ | DB inicializada
+2026-06-11 16:23:29,194 | INFO | execution.mt5_connector | MT5 initialize intento 1/3
+2026-06-11 16:23:31,198 | INFO | execution.mt5_connector | MT5 sesión activa detectada (login=12270082), se reutiliza
+2026-06-11 16:23:31,211 | INFO | execution.mt5_connector | Broker UTC offset detectado: +9000 segundos (+2.5 horas)
+2026-06-11 16:23:31,211 | INFO | execution.mt5_connector | MT5Connector.initialize: conexión MT5 activa
+2026-06-11 16:23:31,216 | INFO | core.orchestrator | [NEWS_CALENDAR] activo: blackout=-30min/+60min custom_events=0 include=['NFP'] override_ml>=0.85
+2026-06-11 16:23:31,220 | INFO | core.orchestrator | [DRIFT] activo: window=30 baseline_WR=0.46 baseline_R=+0.260 wr_thr=0.08 r_thr=0.15 action=trigger_retrain
+2026-06-11 16:23:31,220 | INFO | core.orchestrator | [CHOP_GUARD] activo: range_pos_long_max=0.55 range_pos_short_min=0.45 micro_window=5 micro_avgR_max=0.50 cooldown_min=60 asia_sl_x=1.45 consec_loss_win=2 consec_min_absR=2.00 consec_cooldown=90 ml_conf_scalper>=0.58 blacklist=['RANGE_STRUCTURE_M15_FADE', 'RANGE_FADE_REVERSAL'] weak_hours=[3, 5, 17, 22](+0.07) blocked_hours=[9]
+2026-06-11 16:23:31,221 | INFO | core.orchestrator | dynamic_exit: raíz enabled=True (por símbolo: asset_profiles.<SYM>.dynamic_exit fusiona claves)
+2026-06-11 16:23:31,247 | INFO | ml.model | TradingModel.load: D:\AURION_DATA\models\model.pkl clases=[0, 1]
+2026-06-11 16:23:31,248 | INFO | core.orchestrator | ML cargado desde D:\AURION_DATA\models\model.pkl (n_features=10 schema=1)
+2026-06-11 16:23:31,515 | INFO | ml.model | TradingModel.load: D:\AURION_DATA\models\model_XAUUSD.pkl clases=[0, 1]
+2026-06-11 16:23:31,526 | INFO | core.orchestrator | ML por símbolo XAUUSD cargado desde D:\AURION_DATA\models\model_XAUUSD.pkl (n_features=25)
+2026-06-11 16:23:31,533 | INFO | core.orchestrator | bootstrap ML: modelo existente D:\AURION_DATA\models\model.pkl (baseline_closed=399)
+2026-06-11 16:23:31,564 | INFO | ml.model | TradingModel.load: D:\AURION_DATA\models\model.pkl clases=[0, 1]
+2026-06-11 16:23:31,564 | INFO | ml.quant_engine | QuantMLEngine: modelo global D:\AURION_DATA\models\model.pkl
+2026-06-11 16:23:31,594 | INFO | ml.model | TradingModel.load: D:\AURION_DATA\models\model.pkl clases=[0, 1]
+2026-06-11 16:23:31,594 | INFO | ml.quant_engine | [QUANT_RELOAD] BTCUSD ← D:\AURION_DATA\models\model.pkl
+2026-06-11 16:23:31,622 | INFO | ml.model | TradingModel.load: D:\AURION_DATA\models\model.pkl clases=[0, 1]
+2026-06-11 16:23:31,623 | INFO | ml.quant_engine | [QUANT_RELOAD] NDX100 ← D:\AURION_DATA\models\model.pkl
+2026-06-11 16:23:31,669 | INFO | ml.ensemble_model | EnsembleTradingModel.load: D:\AURION_DATA\models\XAUUSD\best_model.pkl estimators=['rf', 'lr', 'xgb', 'lgbm']
+2026-06-11 16:23:31,670 | INFO | ml.quant_engine | [QUANT_RELOAD] XAUUSD ← D:\AURION_DATA\models\XAUUSD\best_model.pkl
+2026-06-11 16:23:31,677 | INFO | core.orchestrator | [APEX] motor cuantitativo auto-evolutivo activo (institucional + micro + meta-riesgo)
+2026-06-11 16:23:31,682 | INFO | core.orchestrator | [V4] cableando componentes AURION X 4.0 HIBRIDO (focus=XAUUSD)
+2026-06-11 16:23:31,687 | INFO | core.orchestrator | [V4] gold_features activo (schema=v3)
+2026-06-11 16:23:31,695 | INFO | core.orchestrator | [V4] patchtst predictor instanciado (model=D:/AURION_DATA/models/patchtst_xauusd_v4.pt)
+2026-06-11 16:23:31,713 | INFO | ml.meta_stacker | MetaStacker cargado: meta_stacker_xauusd_v4.pkl
+2026-06-11 16:23:31,713 | INFO | core.orchestrator | [V4] meta_stacker instanciado (fitted=True)
+2026-06-11 16:23:31,713 | INFO | ml.quant_engine | QuantMLEngine: hooks v4 adjuntos (transformer=True, meta_stacker=True)
+2026-06-11 16:23:31,713 | INFO | core.orchestrator | [V4] quant_engine.attach_v4_hybrid OK (tfmr=True, stacker=True)
+2026-06-11 16:23:31,717 | INFO | core.orchestrator | [V4] anomaly_autoencoder detector instanciado (model=D:/AURION_DATA/models/anomaly_ae_xauusd_v4.pt)
+2026-06-11 16:23:31,717 | INFO | ml.apex_engine | ApexEngine: anomaly detector v4 adjunto (True)
+2026-06-11 16:23:31,718 | INFO | core.orchestrator | [V4] apex_engine.attach_v4_anomaly_detector OK (detector=True)
+2026-06-11 16:23:31,732 | INFO | core.orchestrator | [V4] drl_exit_shadow instanciado (shadow_mode=True, model=D:/AURION_DATA/models/ppo_exit_xauusd_v4.zip)
+2026-06-11 16:23:31,733 | INFO | core.orchestrator | [V4] cableado completo: gold=True tfmr=True stacker=True anomaly=True drl_shadow=True
+2026-06-11 16:23:31,772 | INFO | core.orchestrator | [SMC] capa institucional activa: symbols=('XAUUSD',) tfs=('M15', 'M30', 'H1', 'H4', 'D1', 'W1') primary=M15 persist=True
+2026-06-11 16:23:31,789 | INFO | ml.xau_knowledge_engine | [KNOWLEDGE] XAUKnowledgeEngine inicializado (model_path=D:\AURION_DATA\models\model_XAUUSD.pkl, triggers=closed_trades>=5/EOD@23h/regime_change>=15m/winrate_drop>0.07)
+2026-06-11 16:23:31,789 | INFO | core.orchestrator | [KNOWLEDGE] activa: symbol=XAUUSD tfs=('M15', 'M30', 'H1', 'H4', 'D1') model=D:\AURION_DATA\models\model_XAUUSD.pkl triggers=closed>=5/EOD@23h/regime>=15m/drop>=0.07
+2026-06-11 16:23:31,790 | INFO | risk.risk_manager | RiskManager.start_session equity=4896.04
+2026-06-11 16:23:31,790 | INFO | core.orchestrator | RiskManager.start_session equity_baseline=4896.04 (live_equity=True)
+2026-06-11 16:23:31,808 | INFO | analytics.trade_repository | get_training_dataset: 41 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:23:31,809 | WARNING | core.orchestrator | [CONFIG] live con loss_streak_reset_after_cooldown: pensado para demo; revisa riesgo
+2026-06-11 16:23:31,809 | INFO | core.orchestrator | [HEALTH] ml_enabled=True ml_veto=True model_path=D:\AURION_DATA\models\model.pkl model_exists=True auto_retrain=True walk_forward=True min_closed=30 every_closed=5 hints_path=D:\AURION_DATA\hints\aurion_live_hints.csv hints_enabled=True hints_require_trade=True decision_interval_ms=1500.0 corr_groups=0 max_open_group=2 intraday_kill=True sniper_whitelist_gate=False low_vol_breakout_ok=True extreme_mtf_ok=False lenient_extreme_vol=False ml_no_model_relax=0.08 ml_no_model_conf_boost=0.06 skip_mtf=False
+2026-06-11 16:23:31,809 | INFO | core.orchestrator | Orchestrator.start (running=True) structure_tf=M15 ignore_spread=False session=desactivado mtf_min_support=2 mtf_allow_all_entry_range=True skip_mtf_filter=False
+2026-06-11 16:23:31,810 | INFO | core.orchestrator | [EDGE] fusion=True mtf_stack_bonus=14 ml_boost=0.04 reconcile_s=30.0 magic_filter=True env=live
+2026-06-11 16:23:31,870 | INFO | market.multi_timeframe | [HYDRATE] XAUUSD OHLC pre-cargado (833 velas: M1=119, M5=119, M15=119, M30=119, H1=119, H4=119, D1=119)
+2026-06-11 16:23:31,871 | INFO | market.tick_handler | TickHandler.run: inicio (símbolos=['XAUUSD'])
+2026-06-11 16:23:31,893 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:23:31,895 | INFO | ml.self_optimizer | SelfOptimizer: best_setup=('RANGE_BREAKOUT_MOMENTUM', 0.85) sweep_eff=0.00 weights={'momentum': 1.1, 'range': 1.05, 'liquidity_sweep': 0.88, 'absorption': 1.0, 'session': 1.0}
+2026-06-11 16:23:31,940 | INFO | ml.institutional_engine | [INST] daily optimization weights={'momentum': 1.1, 'range': 1.05, 'liquidity_sweep': 0.88, 'absorption': 1.0, 'session': 1.0} mc_lot=0.50
+2026-06-11 16:23:31,963 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:23:31,965 | INFO | ml.self_optimizer | SelfOptimizer: best_setup=('RANGE_BREAKOUT_MOMENTUM', 0.85) sweep_eff=0.00 weights={'momentum': 1.05, 'range': 1.05, 'liquidity_sweep': 0.88, 'absorption': 1.0, 'session': 1.0}
+2026-06-11 16:23:31,966 | INFO | ml.self_evolution_engine | [EVOLVE] best_hour=22 best_setup=RANGE_BREAKOUT_MOMENTUM weights={'momentum': 1.1576250000000001, 'range': 1.1025, 'liquidity_sweep': 0.88, 'absorption': 1.0, 'session': 1.0}
+2026-06-11 16:23:33,042 | INFO | ml.apex_engine | [APEX] evolución diaria thr=0.000 agg=1.00
+2026-06-11 16:23:33,067 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:23:33,072 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:23:33,072 | INFO | core.orchestrator | XAUUSD | impulsos H4: DOWN +7.8% (2026-06-09T16:00:00+00:00 → 2026-06-11T00:00:00+00:00); UP +5.2% (2026-05-28T04:00:00+00:00 → 2026-05-29T16:00:00+00:00); DOWN +4.6% (2026-06-05T12:00:00+00:00 → 2026-06-08T08:00:00+00:00); DOWN +3.2% (2026-05-29T16:00:00+00:00 → 2026-06-01T16:00:00+00:00); DOWN +3.0% (2026-05-27T00:00:00+00:00 → 2026-05-27T16:00:00+00:00)
+2026-06-11 16:23:33,072 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=0 dominante=n/a session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=0 other=0 top_setups=sin_datos
+2026-06-11 16:23:33,222 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:23:33,223 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:24:19,787 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:24:33,140 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:24:34,400 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:24:34,520 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:25:05,143 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:25:33,224 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:25:34,046 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=75 dominante=no_signal=75 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=75 other=0 top_setups=sin_datos
+2026-06-11 16:25:35,672 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:25:35,789 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:25:50,152 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:26:33,423 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:26:35,465 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:26:37,093 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:26:37,213 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:27:20,560 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:27:33,524 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:27:35,190 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=150 dominante=no_signal=150 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=150 other=0 top_setups=sin_datos
+2026-06-11 16:27:38,434 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:27:38,612 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:28:05,899 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:28:30,082 | INFO | core.orchestrator | BLOCK_SUMMARY(300s): total=185 top=no_strategy_signal=185
+2026-06-11 16:28:33,556 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:28:39,834 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:28:39,948 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:28:51,066 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:29:33,610 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:29:36,283 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=225 dominante=no_signal=225 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=225 other=0 top_setups=sin_datos
+2026-06-11 16:29:36,296 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:29:41,144 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:29:41,275 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:30:21,372 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:30:33,711 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:30:42,400 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:30:42,531 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:31:06,562 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:31:33,776 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:31:37,221 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=300 dominante=no_signal=300 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=300 other=0 top_setups=sin_datos
+2026-06-11 16:31:43,696 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:31:43,816 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:31:51,694 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:32:33,897 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:32:36,940 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:32:45,063 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:32:45,263 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:33:22,131 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:33:30,220 | INFO | core.orchestrator | BLOCK_SUMMARY(300s): total=186 top=no_strategy_signal=186
+2026-06-11 16:33:33,887 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:33:38,343 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=375 dominante=no_signal=375 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=375 other=0 top_setups=sin_datos
+2026-06-11 16:33:46,429 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:33:46,559 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:34:07,358 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:34:33,955 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:34:47,700 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:34:47,811 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:34:52,458 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:35:33,984 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:35:37,626 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:35:39,252 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=450 dominante=no_signal=450 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=450 other=0 top_setups=sin_datos
+2026-06-11 16:35:48,955 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:35:49,074 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:36:22,709 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:36:34,046 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:36:50,205 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:36:50,314 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:37:07,878 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:37:34,182 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:37:40,274 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=525 dominante=no_signal=525 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=525 other=0 top_setups=sin_datos
+2026-06-11 16:37:51,620 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:37:51,753 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:37:53,173 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:38:30,387 | INFO | core.orchestrator | BLOCK_SUMMARY(300s): total=186 top=no_strategy_signal=186
+2026-06-11 16:38:33,640 | INFO | core.orchestrator | XAUUSD | impulsos H4: DOWN +7.8% (2026-06-09T16:00:00+00:00 → 2026-06-11T00:00:00+00:00); UP +5.2% (2026-05-28T04:00:00+00:00 → 2026-05-29T16:00:00+00:00); DOWN +4.6% (2026-06-05T12:00:00+00:00 → 2026-06-08T08:00:00+00:00); DOWN +3.2% (2026-05-29T16:00:00+00:00 → 2026-06-01T16:00:00+00:00); DOWN +3.0% (2026-05-27T00:00:00+00:00 → 2026-05-27T16:00:00+00:00)
+2026-06-11 16:38:34,295 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:38:38,566 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:38:53,117 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:38:53,235 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:39:23,836 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:39:34,357 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:39:41,437 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=600 dominante=no_signal=600 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=600 other=0 top_setups=sin_datos
+2026-06-11 16:39:54,368 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:39:54,496 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:40:10,450 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:40:34,426 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:40:55,638 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:40:55,769 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:40:55,771 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:41:34,483 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:41:42,385 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=675 dominante=no_signal=675 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=675 other=0 top_setups=sin_datos
+2026-06-11 16:41:42,397 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:41:56,921 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:41:57,058 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:42:27,642 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:42:34,527 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:42:58,135 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:42:58,253 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:43:14,197 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:43:31,870 | INFO | core.orchestrator | BLOCK_SUMMARY(300s): total=187 top=no_strategy_signal=187
+2026-06-11 16:43:34,542 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:43:43,231 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=750 dominante=no_signal=750 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=750 other=0 top_setups=sin_datos
+2026-06-11 16:43:59,383 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:43:59,513 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:43:59,514 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:44:34,551 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:44:46,067 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:45:00,604 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:45:00,761 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:45:31,348 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:45:34,596 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:45:44,093 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=825 dominante=no_signal=825 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=825 other=0 top_setups=sin_datos
+2026-06-11 16:46:01,862 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:46:02,016 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:46:17,957 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:46:34,696 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:47:03,155 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:47:03,272 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:47:03,273 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:47:34,698 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:47:45,003 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=900 dominante=no_signal=900 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=900 other=0 top_setups=sin_datos
+2026-06-11 16:47:49,860 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:48:04,428 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:48:04,557 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:48:33,406 | INFO | core.orchestrator | BLOCK_SUMMARY(300s): total=187 top=no_strategy_signal=187
+2026-06-11 16:48:34,851 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:48:35,192 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:49:05,653 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:49:05,767 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:49:21,705 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:49:35,052 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:49:45,862 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=975 dominante=no_signal=975 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=975 other=0 top_setups=sin_datos
+2026-06-11 16:50:06,848 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:50:06,964 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:50:06,965 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:50:35,232 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:50:53,504 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:51:08,032 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:51:08,142 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:51:35,395 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:51:38,788 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:51:46,654 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=1050 dominante=no_signal=1050 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=1050 other=0 top_setups=sin_datos
+2026-06-11 16:52:09,260 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:52:09,374 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:52:25,309 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:52:35,432 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:53:10,458 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:53:10,572 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:53:10,574 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:53:34,585 | INFO | core.orchestrator | XAUUSD | impulsos H4: DOWN +7.8% (2026-06-09T16:00:00+00:00 → 2026-06-11T00:00:00+00:00); UP +5.2% (2026-05-28T04:00:00+00:00 → 2026-05-29T16:00:00+00:00); DOWN +4.6% (2026-06-05T12:00:00+00:00 → 2026-06-08T08:00:00+00:00); DOWN +3.2% (2026-05-29T16:00:00+00:00 → 2026-06-01T16:00:00+00:00); DOWN +3.0% (2026-05-27T00:00:00+00:00 → 2026-05-27T16:00:00+00:00)
+2026-06-11 16:53:34,598 | INFO | core.orchestrator | BLOCK_SUMMARY(300s): total=187 top=no_strategy_signal=187
+2026-06-11 16:53:35,635 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:53:47,469 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=1125 dominante=no_signal=1125 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=1125 other=0 top_setups=sin_datos
+2026-06-11 16:53:55,587 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:54:11,740 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:54:11,878 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:54:35,699 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:54:40,757 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:55:12,968 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:55:13,083 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:55:25,796 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:55:35,713 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:55:48,349 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=1200 dominante=no_signal=1200 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=1200 other=0 top_setups=sin_datos
+2026-06-11 16:56:10,960 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:56:14,233 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:56:14,385 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:56:35,798 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:56:56,096 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:57:15,466 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:57:15,617 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:57:35,817 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:57:41,314 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:57:49,301 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=1275 dominante=no_signal=1275 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=1275 other=0 top_setups=sin_datos
+2026-06-11 16:58:16,753 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:58:16,872 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:58:26,357 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:58:35,870 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:58:36,088 | INFO | core.orchestrator | BLOCK_SUMMARY(300s): total=187 top=no_strategy_signal=187
+2026-06-11 16:59:11,554 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 16:59:18,022 | INFO | core.orchestrator | MTF XAUUSD | M1:DOWN, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 16:59:18,133 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=77 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 16:59:35,912 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 16:59:50,190 | INFO | core.orchestrator | [TELEMETRY] symbol=XAUUSD signals=0 opened=0 closed=0 conv=0.0% winrate=0.0% avgR=0.000 netPnl=0.00 blocked=1350 dominante=no_signal=1350 session=0 mtf=0 ml_dir=0 validator=0 score=0 low_conf=0 risk=0 no_signal=1350 other=0 top_setups=sin_datos
+2026-06-11 16:59:56,659 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 17:00:19,273 | INFO | core.orchestrator | MTF XAUUSD | M1:UP, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 17:00:19,391 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=76 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 17:00:35,962 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 17:00:41,828 | INFO | core.orchestrator | XAUUSD skip: sin señal de estrategia (intraday/scalper)
+2026-06-11 17:01:01,317 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 17:01:01,357 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.528 ml=0.603 inst=0.562 micro=0.487 risk=0.000 exec=0.931 hyper=0.559
+2026-06-11 17:01:01,368 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.528 ml=0.603 inst=0.562 micro=0.487 risk=0.000 exec=0.931 hyper=0.559
+2026-06-11 17:01:01,416 | INFO | core.orchestrator | XAUUSD | SMC override no aplicable: dir_aligned=False short_term_ok=True ob_aligned=True ml_conf=0.60 macro=NEUTRAL inst=NEUTRAL
+2026-06-11 17:01:01,417 | INFO | core.orchestrator | XAUUSD | SMC structural-majority NO aplicable: op_aligned=True (op_b=BULLISH d=BUY) aligned_tfs=3/4 [M15:UP, M30:UP, H1:UP, D1:DOWN] ob_aligned=True ml_conf=0.60 conf_score=0.00
+2026-06-11 17:01:01,417 | INFO | core.orchestrator | XAUUSD skip: MTF no alineado con BUY | M1:UP, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 17:01:02,640 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.541 ml=0.631 inst=0.562 micro=0.465 risk=0.000 exec=0.935 hyper=0.577
+2026-06-11 17:01:02,663 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.541 ml=0.631 inst=0.562 micro=0.465 risk=0.000 exec=0.935 hyper=0.577
+2026-06-11 17:01:04,313 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.515 ml=0.572 inst=0.562 micro=0.485 risk=0.000 exec=0.936 hyper=0.539
+2026-06-11 17:01:04,335 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.515 ml=0.572 inst=0.562 micro=0.485 risk=0.000 exec=0.936 hyper=0.539
+2026-06-11 17:01:05,983 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.524 ml=0.592 inst=0.562 micro=0.485 risk=0.000 exec=0.936 hyper=0.552
+2026-06-11 17:01:05,995 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.524 ml=0.592 inst=0.562 micro=0.485 risk=0.000 exec=0.936 hyper=0.552
+2026-06-11 17:01:07,643 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.509 ml=0.558 inst=0.562 micro=0.571 risk=0.000 exec=0.935 hyper=0.530
+2026-06-11 17:01:07,666 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.509 ml=0.558 inst=0.562 micro=0.571 risk=0.000 exec=0.935 hyper=0.530
+2026-06-11 17:01:09,419 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.515 ml=0.570 inst=0.562 micro=0.573 risk=0.000 exec=0.934 hyper=0.539
+2026-06-11 17:01:09,431 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.515 ml=0.570 inst=0.562 micro=0.573 risk=0.000 exec=0.934 hyper=0.539
+2026-06-11 17:01:10,876 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.516 ml=0.574 inst=0.562 micro=0.569 risk=0.000 exec=0.934 hyper=0.541
+2026-06-11 17:01:10,899 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.516 ml=0.574 inst=0.562 micro=0.569 risk=0.000 exec=0.934 hyper=0.541
+2026-06-11 17:01:12,545 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.540 ml=0.630 inst=0.562 micro=0.460 risk=0.000 exec=0.935 hyper=0.576
+2026-06-11 17:01:12,567 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.540 ml=0.630 inst=0.562 micro=0.460 risk=0.000 exec=0.935 hyper=0.576
+2026-06-11 17:01:14,211 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.542 ml=0.633 inst=0.562 micro=0.473 risk=0.000 exec=0.926 hyper=0.578
+2026-06-11 17:01:14,235 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.542 ml=0.633 inst=0.562 micro=0.473 risk=0.000 exec=0.926 hyper=0.578
+2026-06-11 17:01:15,880 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.490 ml=0.538 inst=0.562 micro=0.505 risk=0.000 exec=0.936 hyper=0.502
+2026-06-11 17:01:15,880 | INFO | core.orchestrator | XAUUSD skip: motor institucional (range_not_tradeable:no_range_structure) grade=X
+2026-06-11 17:01:17,617 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.492 ml=0.538 inst=0.562 micro=0.518 risk=0.000 exec=0.935 hyper=0.505
+2026-06-11 17:01:19,045 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.493 ml=0.537 inst=0.562 micro=0.518 risk=0.000 exec=0.935 hyper=0.506
+2026-06-11 17:01:20,670 | INFO | core.orchestrator | MTF XAUUSD | M1:UP, M5:UP, M15:UP, M30:UP, H1:UP, H4:DOWN, D1:DOWN, W1:RANGE, MN1:RANGE
+2026-06-11 17:01:20,681 | INFO | core.orchestrator | [SMC] XAUUSD snapshot ob=7 bos=6 choch=5 fvg=76 liq=96 macro=NEUTRAL inst=NEUTRAL op=BULLISH
+2026-06-11 17:01:20,695 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.501 ml=0.540 inst=0.562 micro=0.505 risk=0.000 exec=0.936 hyper=0.519
+2026-06-11 17:01:22,320 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.503 ml=0.545 inst=0.562 micro=0.501 risk=0.000 exec=0.935 hyper=0.522
+2026-06-11 17:01:23,956 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.502 ml=0.542 inst=0.562 micro=0.505 risk=0.000 exec=0.935 hyper=0.520
+2026-06-11 17:01:25,719 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.507 ml=0.553 inst=0.562 micro=0.500 risk=0.000 exec=0.936 hyper=0.527
+2026-06-11 17:01:25,731 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.507 ml=0.553 inst=0.562 micro=0.500 risk=0.000 exec=0.936 hyper=0.527
+2026-06-11 17:01:27,177 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.505 ml=0.549 inst=0.562 micro=0.500 risk=0.000 exec=0.936 hyper=0.524
+2026-06-11 17:01:28,814 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.505 ml=0.549 inst=0.562 micro=0.500 risk=0.000 exec=0.936 hyper=0.524
+2026-06-11 17:01:30,454 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.494 ml=0.537 inst=0.562 micro=0.512 risk=0.000 exec=0.935 hyper=0.509
+2026-06-11 17:01:32,094 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.502 ml=0.541 inst=0.562 micro=0.500 risk=0.000 exec=0.934 hyper=0.519
+2026-06-11 17:01:33,851 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.541 ml=0.630 inst=0.562 micro=0.484 risk=0.000 exec=0.936 hyper=0.577
+2026-06-11 17:01:33,864 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.541 ml=0.630 inst=0.562 micro=0.484 risk=0.000 exec=0.936 hyper=0.577
+2026-06-11 17:01:35,309 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.496 ml=0.537 inst=0.562 micro=0.534 risk=0.000 exec=0.936 hyper=0.512
+2026-06-11 17:01:36,148 | INFO | analytics.trade_repository | get_training_dataset: 52 zombies excluidos del entrenamiento (sym=ALL)
+2026-06-11 17:01:36,972 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.496 ml=0.537 inst=0.562 micro=0.534 risk=0.000 exec=0.936 hyper=0.512
+2026-06-11 17:01:38,614 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.497 ml=0.536 inst=0.562 micro=0.499 risk=0.000 exec=0.936 hyper=0.512
+2026-06-11 17:01:40,252 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.506 ml=0.551 inst=0.562 micro=0.499 risk=0.000 exec=0.936 hyper=0.526
+2026-06-11 17:01:40,276 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.506 ml=0.551 inst=0.562 micro=0.499 risk=0.000 exec=0.936 hyper=0.526
+2026-06-11 17:01:42,039 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.541 ml=0.630 inst=0.562 micro=0.482 risk=0.000 exec=0.937 hyper=0.577
+2026-06-11 17:01:42,055 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.541 ml=0.630 inst=0.562 micro=0.482 risk=0.000 exec=0.937 hyper=0.577
+2026-06-11 17:01:43,505 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.506 ml=0.551 inst=0.562 micro=0.495 risk=0.000 exec=0.937 hyper=0.526
+2026-06-11 17:01:43,528 | INFO | analytics.quant_decision_log | [QUANT_DECISION] XAUUSD BUY allow=True block=- total=0.506 ml=0.551 inst=0.562 micro=0.495 risk=0.000 exec=0.937 hyper=0.526

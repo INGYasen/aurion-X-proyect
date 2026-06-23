@@ -1,0 +1,16 @@
+{
+  "oos_accuracy": 0.6266666666666667,
+  "accuracy": 0.6266666666666667,
+  "winrate": 0.5866666666666667,
+  "expectancy": 0.5700746666666666,
+  "sharpe": 3.5585809001419935,
+  "drawdown": 7.284528278615817,
+  "profit_factor": 2.378630320735431,
+  "stability_score": 0.8727062306956711,
+  "consistency_score": 0.6328708978395486,
+  "overfitting_score": 0.0,
+  "confidence_penalty": 0.0,
+  "n_test": 75.0,
+  "false_signal_rate": 0.3733333333333333,
+  "walk_forward": 1.0
+}

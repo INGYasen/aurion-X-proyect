@@ -1,0 +1,82 @@
+﻿python.exe : D:\AURIONX3.0 Machine Learning in Algorithmic Trading\AURION_X_3_0\tools\backtest_xauusd.py:608: 
+DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use 
+timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+En C:\Users\LENOVO LEGION\AppData\Local\Temp\ps-script-523d9a07-9bfa-4b21-8ff5-2a8850b9e055.ps1: 77 Carácter: 1
++ & "D:\AURION_DATA\venv_v4\Scripts\python.exe" tools/backtest_xauusd.p ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\AURIONX3.0 M...(datetime.UTC).:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+============================================================================
+ AURION X — BACKTEST HISTÓRICO XAUUSD 3 AÑOS
+============================================================================
+
+[1/4] Cargando históricos…
+  cargado M15: 70,742 barras, 2023-06-02 16:45:00+00:00 → 2026-06-01 16:30:00+00:00
+  cargado M30: 35,377 barras, 2023-06-02 17:00:00+00:00 → 2026-06-01 16:30:00+00:00
+  cargado H1: 17,698 barras, 2023-06-02 17:00:00+00:00 → 2026-06-01 16:00:00+00:00
+  cargado H4: 4,718 barras, 2023-06-02 20:00:00+00:00 → 2026-06-01 16:00:00+00:00
+  cargado D1: 859 barras, 2023-06-03 00:00:00+00:00 → 2026-06-01 00:00:00+00:00
+  cargado W1: 157 barras, 2023-06-04 00:00:00+00:00 → 2026-05-31 00:00:00+00:00
+
+[2/4] Filtrando ventana…
+  ventana M15: 2025-06-02 01:00:00+00:00 → 2026-06-01 16:30:00+00:00  (23,609 barras)
+
+[3/4] Inicializando SMCAnalyzer (sin DB, solo cache)…
+
+[4/4] Ejecutando backtest bar-a-bar (anti-look-ahead)…
+  Reglas: MIN_CONF=0.42 RR=2.0 MAX_HOLD=96b COOLDOWN=4b TX=0.05R
+  [ 18.3%] bar 4311/23609  (2025-08-06)  trades=0  open=1
+  [ 25.2%] bar 5950/23609  (2025-08-29)  trades=2  open=1
+
+  --- DIAGNÓSTICO ---
+    evals             : 5761
+    snap_none         : 0
+    conf_lt_min       : 5319
+    macro_neutral     : 97
+    inst_misalign     : 111
+    bos_misalign      : 70
+    no_ob_match       : 150
+    risk_zero         : 0
+    risk_too_big      : 0
+    macro_distrib     : {'BULLISH': 3658, 'BEARISH': 884, 'NEUTRAL': 1219}
+    confluence_dist:
+      n=5761, mean=0.320, median=0.312, max=0.672
+      p50=0.312
+      p75=0.356
+      p90=0.407
+      p95=0.449
+      p99=0.508
+
+
+  ✔ Backtest completado en 97.9s — 14 trades.
+
+============================================================================
+ RESULTADO GLOBAL
+============================================================================
+  trades             : 14
+  wins               : 9
+  losses             : 5
+  winrate            :         0.6429
+  avg_r              :         0.7654
+  avg_r_win          :         1.7739
+  avg_r_loss         :        -1.0500
+  profit_factor      :         3.0410
+  expectancy_r       :         0.7654
+  sharpe_annual      :         8.6123
+  max_dd_pct         :        -1.0095
+  pnl_usd            :      5357.7295
+  final_equity       :    105357.7295
+  first_trade        : 2025-08-06
+  last_trade         : 2025-09-23
+
+--- Tabla mensual ---
+  YYYY-MM   trades  wins    WR%    avgR     totR     pnl_usd
+  2025-08        3     2   66.7   0.422     1.27      632.73
+  2025-09       11     7   63.6   0.859     9.45     4725.00
+
+  Reporte guardado en: D:\AURIONX3.0 Machine Learning in Algorithmic Trading\AURION_X_3_0\tools\reports\backtest_20260602_032343.json
+============================================================================
+

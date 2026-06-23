@@ -1,0 +1,469 @@
+{
+  "symbol": "XAUUSD",
+  "period_start": "2026-06-05T00:53:01.110836+00:00",
+  "period_end": "2026-06-12T00:53:01.110836+00:00",
+  "n_trades": 23,
+  "overall": {
+    "n": 23,
+    "n_wins": 14,
+    "n_losses": 9,
+    "win_rate": 0.6087,
+    "avg_r": 6.94,
+    "total_r": 159.62,
+    "total_pnl": 152.01,
+    "expectancy": 6.94
+  },
+  "by_hour": {
+    "3": {
+      "n": 2,
+      "n_wins": 0,
+      "n_losses": 2,
+      "win_rate": 0.0,
+      "avg_r": -14.4,
+      "total_r": -28.8,
+      "total_pnl": -14.4,
+      "expectancy": -14.4
+    },
+    "4": {
+      "n": 1,
+      "n_wins": 0,
+      "n_losses": 1,
+      "win_rate": 0.0,
+      "avg_r": -14.4,
+      "total_r": -14.4,
+      "total_pnl": -7.2,
+      "expectancy": -14.4
+    },
+    "5": {
+      "n": 1,
+      "n_wins": 0,
+      "n_losses": 1,
+      "win_rate": 0.0,
+      "avg_r": -14.4,
+      "total_r": -14.4,
+      "total_pnl": -7.2,
+      "expectancy": -14.4
+    },
+    "14": {
+      "n": 3,
+      "n_wins": 3,
+      "n_losses": 0,
+      "win_rate": 1.0,
+      "avg_r": 0.66,
+      "total_r": 1.98,
+      "total_pnl": 0.99,
+      "expectancy": 0.66
+    },
+    "15": {
+      "n": 3,
+      "n_wins": 3,
+      "n_losses": 0,
+      "win_rate": 1.0,
+      "avg_r": 0.66,
+      "total_r": 1.98,
+      "total_pnl": 0.99,
+      "expectancy": 0.66
+    },
+    "16": {
+      "n": 1,
+      "n_wins": 0,
+      "n_losses": 1,
+      "win_rate": 0.0,
+      "avg_r": 0.0,
+      "total_r": 0.0,
+      "total_pnl": 0.0,
+      "expectancy": 0.0
+    },
+    "22": {
+      "n": 3,
+      "n_wins": 2,
+      "n_losses": 1,
+      "win_rate": 0.6667,
+      "avg_r": 3.72,
+      "total_r": 11.16,
+      "total_pnl": 5.58,
+      "expectancy": 3.72
+    },
+    "9": {
+      "n": 1,
+      "n_wins": 0,
+      "n_losses": 1,
+      "win_rate": 0.0,
+      "avg_r": -10.3,
+      "total_r": -10.3,
+      "total_pnl": -5.15,
+      "expectancy": -10.3
+    },
+    "18": {
+      "n": 1,
+      "n_wins": 1,
+      "n_losses": 0,
+      "win_rate": 1.0,
+      "avg_r": 68.0,
+      "total_r": 68.0,
+      "total_pnl": 34.0,
+      "expectancy": 68.0
+    },
+    "19": {
+      "n": 4,
+      "n_wins": 4,
+      "n_losses": 0,
+      "win_rate": 1.0,
+      "avg_r": 34.0,
+      "total_r": 136.0,
+      "total_pnl": 136.0,
+      "expectancy": 34.0
+    },
+    "20": {
+      "n": 3,
+      "n_wins": 1,
+      "n_losses": 2,
+      "win_rate": 0.3333,
+      "avg_r": 2.8,
+      "total_r": 8.4,
+      "total_pnl": 8.4,
+      "expectancy": 2.8
+    }
+  },
+  "by_weekday": {
+    "1": {
+      "n": 12,
+      "n_wins": 7,
+      "n_losses": 5,
+      "win_rate": 0.5833,
+      "avg_r": -4.043,
+      "total_r": -48.52,
+      "total_pnl": -24.26,
+      "expectancy": -4.043
+    },
+    "2": {
+      "n": 11,
+      "n_wins": 7,
+      "n_losses": 4,
+      "win_rate": 0.6364,
+      "avg_r": 18.922,
+      "total_r": 208.14,
+      "total_pnl": 176.27,
+      "expectancy": 18.922
+    }
+  },
+  "by_setup_type": {
+    "RANGE_BREAKOUT_MOMENTUM": {
+      "n": 17,
+      "n_wins": 10,
+      "n_losses": 7,
+      "win_rate": 0.5882,
+      "avg_r": 6.159,
+      "total_r": 104.7,
+      "total_pnl": 90.55,
+      "expectancy": 6.159
+    },
+    "RANGE_FADE_REVERSAL": {
+      "n": 1,
+      "n_wins": 0,
+      "n_losses": 1,
+      "win_rate": 0.0,
+      "avg_r": -14.4,
+      "total_r": -14.4,
+      "total_pnl": -7.2,
+      "expectancy": -14.4
+    },
+    "BREAKOUT_CONTINUATION": {
+      "n": 2,
+      "n_wins": 2,
+      "n_losses": 0,
+      "win_rate": 1.0,
+      "avg_r": 17.33,
+      "total_r": 34.66,
+      "total_pnl": 34.33,
+      "expectancy": 17.33
+    },
+    "MICRO_PULLBACK_MOMENTUM": {
+      "n": 2,
+      "n_wins": 2,
+      "n_losses": 0,
+      "win_rate": 1.0,
+      "avg_r": 17.33,
+      "total_r": 34.66,
+      "total_pnl": 34.33,
+      "expectancy": 17.33
+    },
+    "INTRADAY_BREAKOUT": {
+      "n": 1,
+      "n_wins": 0,
+      "n_losses": 1,
+      "win_rate": 0.0,
+      "avg_r": 0.0,
+      "total_r": 0.0,
+      "total_pnl": 0.0,
+      "expectancy": 0.0
+    }
+  },
+  "by_smc_grade": {
+    "n/a": {
+      "n": 23,
+      "n_wins": 14,
+      "n_losses": 9,
+      "win_rate": 0.6087,
+      "avg_r": 6.94,
+      "total_r": 159.62,
+      "total_pnl": 152.01,
+      "expectancy": 6.94
+    }
+  },
+  "by_ob_grade": {
+    "n/a": {
+      "n": 23,
+      "n_wins": 14,
+      "n_losses": 9,
+      "win_rate": 0.6087,
+      "avg_r": 6.94,
+      "total_r": 159.62,
+      "total_pnl": 152.01,
+      "expectancy": 6.94
+    }
+  },
+  "by_fvg_grade": {
+    "n/a": {
+      "n": 23,
+      "n_wins": 14,
+      "n_losses": 9,
+      "win_rate": 0.6087,
+      "avg_r": 6.94,
+      "total_r": 159.62,
+      "total_pnl": 152.01,
+      "expectancy": 6.94
+    }
+  },
+  "by_pd_state": {
+    "n/a": {
+      "n": 23,
+      "n_wins": 14,
+      "n_losses": 9,
+      "win_rate": 0.6087,
+      "avg_r": 6.94,
+      "total_r": 159.62,
+      "total_pnl": 152.01,
+      "expectancy": 6.94
+    }
+  },
+  "by_sweep_kind": {
+    "n/a": {
+      "n": 23,
+      "n_wins": 14,
+      "n_losses": 9,
+      "win_rate": 0.6087,
+      "avg_r": 6.94,
+      "total_r": 159.62,
+      "total_pnl": 152.01,
+      "expectancy": 6.94
+    }
+  },
+  "by_heur_rule": {
+    "NONE": {
+      "n": 23,
+      "n_wins": 14,
+      "n_losses": 9,
+      "win_rate": 0.6087,
+      "avg_r": 6.94,
+      "total_r": 159.62,
+      "total_pnl": 152.01,
+      "expectancy": 6.94
+    }
+  },
+  "top_losers": [
+    {
+      "id": "164e5ea6-86c6-4fc4-9283-4e1da0656edc",
+      "direction": "SHORT",
+      "open_time": "2026-06-09T03:04:58+00:00",
+      "close_time": "2026-06-09T03:05:00.052120+00:00",
+      "profit": -7.2,
+      "r_multiple": -14.4,
+      "setup_type": "RANGE_BREAKOUT_MOMENTUM",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "sl_hit",
+      "hour_utc": 3,
+      "weekday": 1
+    },
+    {
+      "id": "61172910-b1f6-43c7-b221-6b841010e60b",
+      "direction": "SHORT",
+      "open_time": "2026-06-09T03:22:13+00:00",
+      "close_time": "2026-06-09T03:22:15.385823+00:00",
+      "profit": -7.2,
+      "r_multiple": -14.4,
+      "setup_type": "RANGE_BREAKOUT_MOMENTUM",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "sl_hit",
+      "hour_utc": 3,
+      "weekday": 1
+    },
+    {
+      "id": "cd1d036a-d378-46be-9721-819c9a60ead2",
+      "direction": "SHORT",
+      "open_time": "2026-06-09T04:15:05+00:00",
+      "close_time": "2026-06-09T04:15:07.065641+00:00",
+      "profit": -7.2,
+      "r_multiple": -14.4,
+      "setup_type": "RANGE_BREAKOUT_MOMENTUM",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "sl_hit",
+      "hour_utc": 4,
+      "weekday": 1
+    },
+    {
+      "id": "eb9a5590-7d6e-437c-8d19-5eb841be4dbd",
+      "direction": "SHORT",
+      "open_time": "2026-06-09T05:45:46+00:00",
+      "close_time": "2026-06-09T05:45:48.213417+00:00",
+      "profit": -7.2,
+      "r_multiple": -14.4,
+      "setup_type": "RANGE_FADE_REVERSAL",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "sl_hit",
+      "hour_utc": 5,
+      "weekday": 1
+    },
+    {
+      "id": "0634d2b5-46ae-4d6f-981e-53470e079786",
+      "direction": "SHORT",
+      "open_time": "2026-06-10T09:48:01+00:00",
+      "close_time": "2026-06-10T09:48:04.290368+00:00",
+      "profit": -5.15,
+      "r_multiple": -10.3,
+      "setup_type": "RANGE_BREAKOUT_MOMENTUM",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "sl_hit",
+      "hour_utc": 9,
+      "weekday": 2
+    }
+  ],
+  "top_winners": [
+    {
+      "id": "1b67bc0d-b8e2-4198-85c5-c5aa2b36024d",
+      "direction": "SHORT",
+      "open_time": "2026-06-10T18:51:07+00:00",
+      "close_time": "2026-06-10T18:51:09.363676+00:00",
+      "profit": 34.0,
+      "r_multiple": 68.0,
+      "setup_type": "RANGE_BREAKOUT_MOMENTUM",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "secure_profit",
+      "hour_utc": 18,
+      "weekday": 2
+    },
+    {
+      "id": "6e41d354-472a-4182-82e8-882762948474",
+      "direction": "SHORT",
+      "open_time": "2026-06-10T19:36:42+00:00",
+      "close_time": "2026-06-10T19:36:43.961497+00:00",
+      "profit": 34.0,
+      "r_multiple": 34.0,
+      "setup_type": "BREAKOUT_CONTINUATION",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "secure_profit",
+      "hour_utc": 19,
+      "weekday": 2
+    },
+    {
+      "id": "3cac57ec-5fbc-4fd5-a6b3-cde43c7022ea",
+      "direction": "SHORT",
+      "open_time": "2026-06-10T19:34:00+00:00",
+      "close_time": "2026-06-10T19:34:02.534963+00:00",
+      "profit": 34.0,
+      "r_multiple": 34.0,
+      "setup_type": "MICRO_PULLBACK_MOMENTUM",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "secure_profit",
+      "hour_utc": 19,
+      "weekday": 2
+    },
+    {
+      "id": "274c7f66-5e4f-48f1-9139-8a08a6f41d2d",
+      "direction": "SHORT",
+      "open_time": "2026-06-10T19:11:01+00:00",
+      "close_time": "2026-06-10T19:11:03.350642+00:00",
+      "profit": 34.0,
+      "r_multiple": 34.0,
+      "setup_type": "RANGE_BREAKOUT_MOMENTUM",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "secure_profit",
+      "hour_utc": 19,
+      "weekday": 2
+    },
+    {
+      "id": "0d14d3dc-6c60-46ad-a5ee-1d27ef402d4d",
+      "direction": "SHORT",
+      "open_time": "2026-06-10T19:01:05+00:00",
+      "close_time": "2026-06-10T19:01:05.750675+00:00",
+      "profit": 34.0,
+      "r_multiple": 34.0,
+      "setup_type": "RANGE_BREAKOUT_MOMENTUM",
+      "smc_grade": null,
+      "smc_score": null,
+      "ob_grade": null,
+      "fvg_grade": null,
+      "pd_state": null,
+      "sweep_kind": null,
+      "heur_rules": [],
+      "close_reason": "secure_profit",
+      "hour_utc": 19,
+      "weekday": 2
+    }
+  ],
+  "recommendations": []
+}

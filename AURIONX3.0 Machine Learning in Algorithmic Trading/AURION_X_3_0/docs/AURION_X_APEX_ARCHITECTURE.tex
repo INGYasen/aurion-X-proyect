@@ -1,0 +1,756 @@
+% !TEX program = pdflatex
+% AURION X 3.0 / APEX ENGINE — Documentación institucional (diagramas TikZ avanzados)
+% Compilar: pdflatex AURION_X_APEX_ARCHITECTURE.tex  (×2)  |  Overleaf: pdfLaTeX
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{left=2cm,right=2cm,top=2.2cm,bottom=2.2cm}
+
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\usepackage{tikz}
+\usetikzlibrary{
+  arrows.meta,
+  positioning,
+  shapes.geometric,
+  shapes.symbols,
+  shapes.multipart,
+  fit,
+  backgrounds,
+  calc,
+  decorations.pathreplacing,
+  patterns.meta,
+  fadings
+}
+
+%──────────────────────────────────────────────────────────────────────────────
+% Paleta corporativa AURION
+%──────────────────────────────────────────────────────────────────────────────
+\definecolor{AXNavy}{RGB}{12,35,75}
+\definecolor{AXNavyLight}{RGB}{32,72,140}
+\definecolor{AXGold}{RGB}{212,168,55}
+\definecolor{AXGoldDark}{RGB}{165,125,30}
+\definecolor{AXSlate}{RGB}{72,88,108}
+\definecolor{AXIce}{RGB}{235,242,252}
+\definecolor{AXMint}{RGB}{210,245,232}
+\definecolor{AXSand}{RGB}{255,248,232}
+\definecolor{AXLavender}{RGB}{238,228,255}
+\definecolor{AXRose}{RGB}{255,228,232}
+\definecolor{AXTeal}{RGB}{215,248,242}
+\definecolor{AXGraphite}{RGB}{45,52,64}
+
+\colorlet{AXLayer1}{AXIce}
+\colorlet{AXLayer2}{AXMint}
+\colorlet{AXLayer3}{AXSand}
+\colorlet{AXLayer4}{AXLavender}
+\colorlet{AXLayer5}{AXRose}
+\colorlet{AXLayer6}{AXTeal}
+\colorlet{AXLayer7}{red!8!white}
+\colorlet{AXLayer8}{blue!6!white}
+\colorlet{AXLayer9}{AXGraphite!12}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AXNavyLight,
+  urlcolor=AXNavyLight
+}
+
+\newtcolorbox{axcallout}[1][]{
+  enhanced, breakable,
+  colback=AXIce, colframe=AXNavyLight,
+  fonttitle=\bfseries\sffamily,
+  attach boxed title to top left={yshift=-2mm,xshift=4mm},
+  boxed title style={colback=AXNavy, colframe=AXNavy, sharp corners},
+  #1
+}
+
+%──────────────────────────────────────────────────────────────────────────────
+% Estilos TikZ profesionales
+%──────────────────────────────────────────────────────────────────────────────
+\tikzset{
+  axarr/.style={
+    -{Stealth[length=3.2mm,width=2.4mm]},
+    line width=1.1pt,
+    draw=AXNavyLight!85,
+    rounded corners=2pt
+  },
+  axarrgold/.style={
+    -{Stealth[length=3mm,width=2.2mm]},
+    line width=1pt,
+    dashed,
+    draw=AXGoldDark!90
+  },
+  axlbl/.style={
+    font=\footnotesize\sffamily\bfseries,
+    text=AXSlate,
+    fill=white,
+    inner sep=2pt,
+    rounded corners=1pt,
+    opacity=0.95
+  },
+  axlblw/.style={
+    font=\scriptsize\sffamily,
+    text=white,
+    fill=AXNavy!85,
+    inner sep=2.5pt,
+    rounded corners=2pt
+  },
+  axpipe/.style={
+    circle, fill=AXNavyLight, inner sep=0pt,
+    minimum size=5pt
+  }
+}
+
+% Caja de capa con barra lateral (estilo enterprise)
+% Uso: \LayerBoxAt{coord}{ancho}{alto}{id}{color}{titulo}{subtitulo}{numero}
+\newcommand{\LayerBoxAt}[8]{%
+  \node[
+    anchor=west, inner sep=0pt,
+    minimum width=#2, minimum height=#3
+  ] (#4-outer) at #1 {};
+  \fill[#5!88!white] (#4-outer.south west) rectangle (#4-outer.north east);
+  \fill[#5] (#4-outer.south west) rectangle ([xshift=5.5mm]#4-outer.south west |- #4-outer.north west);
+  \draw[AXNavy!50, line width=0.6pt] (#4-outer.south west) rectangle (#4-outer.north east);
+  \draw[AXNavy!70, line width=1.2pt] ([xshift=5.5mm]#4-outer.south west) -- ([xshift=5.5mm]#4-outer.north west);
+  \node[anchor=west, font=\bfseries\footnotesize\sffamily, text=white]
+    at ([xshift=1.3mm]#4-outer.west |- #4-outer.center) {#8};
+  \node[
+    anchor=west, align=left, text width=#2-14mm,
+    font=\small\sffamily, text=AXGraphite
+  ] at ([xshift=7mm]#4-outer.west |- #4-outer.center) {%
+    \textbf{#6}\\[-1pt]
+    {\footnotesize #7}%
+  };
+}
+
+% Portada
+\newcommand{\makeaxtitle}{%
+  \begin{titlepage}
+    \begin{tikzpicture}[remember picture,overlay]
+      \fill[AXNavy] (current page.south west) rectangle (current page.north east);
+      \fill[AXNavyLight!40] ([yshift=4cm]current page.south west) rectangle ([yshift=8cm]current page.south east);
+      \fill[AXGold] ([yshift=7.85cm]current page.south west) rectangle ([yshift=8cm]current page.south east);
+      \foreach \i in {0,...,18} {
+        \draw[white, opacity=0.04, line width=0.5pt]
+          ([xshift=\i cm]current page.south west) -- ++(45:18cm);
+      }
+      \node[anchor=west, text=white] at ([xshift=2.2cm,yshift=10cm]current page.south west) {%
+        {\fontsize{42}{46}\selectfont\bfseries AURION\_X 3.0}\\[4pt]
+        {\fontsize{22}{26}\selectfont APEX ENGINE}\\[14pt]
+        {\large Arquitectura del sistema cuantitativo institucional}\\[6pt]
+        {\normalsize Documentación ejecutiva y técnica · Versión 3.0}
+      };
+      \node[
+        draw=AXGold, line width=1.5pt, rounded corners=6pt,
+        fill=AXNavy!60, text=white, inner sep=10pt,
+        font=\footnotesize\sffamily
+      ] at ([xshift=2.2cm,yshift=3.2cm]current page.south west) {%
+        XAUUSD · USTEC · BTCUSD \quad|\quad PostgreSQL · MT5 · ML Ensemble
+      };
+    \end{tikzpicture}
+  \end{titlepage}
+}
+
+\pagestyle{plain}
+\setcounter{secnumdepth}{2}
+
+\begin{document}
+\hypersetup{pageanchor=false}
+\makeaxtitle
+\hypersetup{pageanchor=true}
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Visión general del proyecto}
+%==============================================================================
+
+\begin{axcallout}{title=Resumen ejecutivo}
+\textbf{AURION\_X 3.0} es un motor cuantitativo de trading algorítmico que opera en \textbf{MetaTrader 5}, aprende de resultados históricos en \textbf{PostgreSQL} y entra al mercado solo cuando existe \textbf{ventaja estadística + contexto institucional} verificable por ocho capas de decisión.
+\end{axcallout}
+
+\subsection{Stack de capacidades}
+\begin{center}
+\begin{tikzpicture}[
+  cap/.style={
+    rectangle, rounded corners=5pt,
+    minimum width=3.1cm, minimum height=1.05cm,
+    align=center, font=\footnotesize\sffamily\bfseries,
+    draw=#1!60, fill=#1!15, text=AXGraphite,
+    opacity=0.98
+  }
+]
+  \node[cap=AXNavyLight] (a) {Trading\\algorítmico};
+  \node[cap=AXLavender, right=3mm of a] (b) {ML\\adaptativo};
+  \node[cap=AXSand, right=3mm of b] (c) {Análisis\\institucional};
+  \node[cap=AXMint, right=3mm of c] (d) {Micro-\\estructura};
+  \node[cap=AXRose, below=4mm of b] (e) {Riesgo\\prop firm};
+  \node[cap=AXTeal, right=3mm of e] (f) {Auto-\\aprendizaje};
+  \draw[axarr] (a) -- (b) -- (c) -- (d);
+  \draw[axarr] (b) -- (e) -- (f);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Objetivos de construcción}
+Detectar oportunidades de alta probabilidad · minimizar drawdown · adaptación automática · operación institucional · estabilidad y consistencia en cuentas funded.
+
+%==============================================================================
+\section{Objetivo principal y filosofía}
+%==============================================================================
+
+\begin{center}
+\begin{tikzpicture}
+  \node[
+    rectangle, rounded corners=8pt,
+    minimum width=0.92\textwidth, minimum height=1.4cm,
+    draw=AXGold, line width=1.5pt,
+    fill=AXSand!50
+  ] (q) {};
+  \node[text=AXNavy, font=\large\sffamily\itshape] at (q.center) {%
+    ``Operar únicamente cuando existe una ventaja estadística y contextual clara.''
+  };
+\end{tikzpicture}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=1.4cm]
+  \node[
+    rectangle, rounded corners=6pt, minimum width=4.8cm, minimum height=2.2cm,
+    draw=red!50!black, fill=red!6  ] (no) {};
+  \node[text=AXGraphite, align=center] at (no.center) {%
+    \textbf{\color{red!70!black}ENFOQUE RETAIL}\\[4pt]
+    \footnotesize Rupturas ciegas\\
+    \footnotesize Perseguir velas\\
+    \footnotesize Operar ruido / chop
+  };
+  \node[
+    rectangle, rounded corners=6pt, minimum width=4.8cm, minimum height=2.2cm,
+    draw=AXNavyLight!70, fill=AXMint!40,
+    right=2.2cm of no
+  ] (si) {};
+  \node[text=AXGraphite, align=center] at (si.center) {%
+    \textbf{\color{AXNavy}ENFOQUE INSTITUCIONAL}\\[4pt]
+    \footnotesize Liquidez y sweeps\\
+    \footnotesize Absorción y manipulación\\
+    \footnotesize Desplazamiento real
+  };
+  \node[axlbl, above=6mm of no] {Evita};
+  \node[axlbl, above=6mm of si] {Prioriza};
+  \draw[axarrgold, line width=1.4pt] (no) -- node[axlbl, above, sloped] {evolución} (si);
+\end{tikzpicture}
+\caption{Filosofía operativa del motor AURION.}
+\end{figure}
+
+%==============================================================================
+\section{Activos y despliegue multi-símbolo}
+%==============================================================================
+
+\begin{center}
+\begin{tikzpicture}[
+  asset/.style={
+    circle, minimum size=2.1cm, align=center,
+    font=\footnotesize\sffamily\bfseries, text=white
+  }
+]
+  \node[asset, fill=AXGold!90!black] (xau) {XAUUSD\\{\tiny Oro}};
+  \node[asset, fill=AXNavyLight, right=1.8cm of xau] (ustec) {USTEC\\{\tiny Índice}};
+  \node[asset, fill=AXGraphite, right=1.8cm of ustec] (btc) {BTCUSD\\{\tiny Cripto}};
+  \node[
+    rectangle, rounded corners=4pt, draw=AXNavyLight, dashed,
+    fit=(xau)(btc), inner sep=14pt,
+    fill=AXIce!30, label={[axlbl]above:{\textbf{Un proceso · Un orchestrator · Tres modelos PKL}}}
+  ] {};
+  \draw[axarr] (xau) -- node[axlbl, above] {pesos ML} (ustec);
+  \draw[axarr] (ustec) -- node[axlbl, above] {memoria} (btc);
+\end{tikzpicture}
+\end{center}
+
+Cada activo: \texttt{model\_SYMBOL.pkl} · \texttt{trade\_memory\_SYMBOL.json} · pesos en \texttt{asset\_profiles}.
+
+%==============================================================================
+\section{Arquitectura en 9 capas}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  layerbox/.style={
+    rectangle, rounded corners=4pt, anchor=west,
+    minimum width=11.2cm, minimum height=1.05cm,
+    align=left, text width=10.2cm, inner sep=6pt,
+    font=\small\sffamily, draw=AXNavy!55, line width=0.8pt
+  },
+  badge/.style={
+    circle, minimum size=6.5mm, fill=AXNavy, text=white,
+    font=\scriptsize\bfseries\sffamily, inner sep=0pt
+  }
+]
+  \node[layerbox, fill=AXLayer1] (L1) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {1};}\hspace{0.35cm}%
+    \textbf{Capa 1 — Market Data}\hfill{\footnotesize MT5 · TickHandler · MTF}};
+  \node[layerbox, fill=AXLayer2, below=3.5mm of L1] (L2) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {2};}\hspace{0.35cm}%
+    \textbf{Capa 2 — Market Analysis}\hfill{\footnotesize Regime · Microstructure}};
+  \node[layerbox, fill=AXLayer3, below=3.5mm of L2] (L3) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {3};}\hspace{0.35cm}%
+    \textbf{Capa 3 — Institutional}\hfill{\footnotesize Sweeps · Absorción}};
+  \node[layerbox, fill=AXLayer4, below=3.5mm of L3] (L4) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {4};}\hspace{0.35cm}%
+    \textbf{Capa 4 — Machine Learning}\hfill{\footnotesize Ensemble · Quant}};
+  \node[layerbox, fill=AXLayer5, below=3.5mm of L4] (L5) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {5};}\hspace{0.35cm}%
+    \textbf{Capa 5 — Decision (APEX)}\hfill{\footnotesize Hierarchy · Hyper}};
+  \node[layerbox, fill=AXLayer6, below=3.5mm of L5] (L6) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {6};}\hspace{0.35cm}%
+    \textbf{Capa 6 — Execution}\hfill{\footnotesize Exit AI · Orders}};
+  \node[layerbox, fill=AXLayer7, below=3.5mm of L6] (L7) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {7};}\hspace{0.35cm}%
+    \textbf{Capa 7 — Risk}\hfill{\footnotesize FundingPips · MetaRisk}};
+  \node[layerbox, fill=AXLayer8, below=3.5mm of L7] (L8) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {8};}\hspace{0.35cm}%
+    \textbf{Capa 8 — Self-Learning}\hfill{\footnotesize Retrain · Evolution}};
+  \node[layerbox, fill=AXLayer9, below=3.5mm of L8] (L9) {%
+    \tikz[baseline=-0.5ex]{\node[badge] at (0,0) {9};}\hspace{0.35cm}%
+    \textbf{Capa 9 — Database}\hfill{\footnotesize PostgreSQL · Dashboard}};
+
+  \draw[axarr, line width=1.2pt] ([xshift=5.8cm]L1.north) -- ([xshift=5.8cm]L9.south);
+  \node[axlblw, rotate=-90] at ([xshift=6.15cm]$(L1.north)!0.5!(L9.south)$) {Flujo};
+
+  \foreach \a/\b in {L1/L2,L2/L3,L3/L4,L4/L5,L5/L6,L6/L7,L7/L8,L8/L9} {
+    \draw[axarr] (\a.north) -- (\b.south);
+  }
+  \begin{scope}[on background layer]
+    \node[
+      draw=AXGold, line width=1.2pt, dashed, rounded corners=8pt,
+      fit=(L3)(L5), inner sep=9pt, fill=AXGold!10
+    ] {};
+    \node[axlblw, anchor=north west] at ([xshift=2mm,yshift=-1mm]L3.north west) {CORE};
+  \end{scope}
+\end{tikzpicture}
+\caption{Arquitectura modular en nueve capas (optimizada para impresión PDF).}
+\end{figure}
+
+%==============================================================================
+\section{Hub central: Orchestrator}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  hub/.style={
+    rectangle, rounded corners=8pt,
+    minimum width=3.4cm, minimum height=1.1cm,
+    align=center, font=\footnotesize\sffamily,
+    draw=AXNavyLight!70, fill=white,
+  },
+  core/.style={
+    circle, minimum size=2.8cm, align=center,
+    font=\small\sffamily\bfseries, text=white,
+    fill=AXNavy  }
+]
+  \node[core] (orch) {ORCHESTRATOR\\[-2pt]{\footnotesize core/main}};
+  \node[hub, fill=AXIce, above left=1.1cm and 0.9cm of orch] (mt5) {\textbf{MT5}\\Connector};
+  \node[hub, fill=AXMint, above right=1.1cm and 0.9cm of orch] (strat) {\textbf{Strategy}\\Scalper · Intraday};
+  \node[hub, fill=AXLavender, left=1.5cm of orch] (apex) {\textbf{ApexEngine}\\Institutional};
+  \node[hub, fill=AXRose, right=1.5cm of orch] (risk) {\textbf{Risk}\\Manager};
+  \node[hub, fill=AXSand, below left=1.1cm and 0.9cm of orch] (pg) {\textbf{PostgreSQL}\\TradeRepo};
+  \node[hub, fill=AXTeal, below right=1.1cm and 0.9cm of orch] (exec) {\textbf{Execution}\\Orders};
+
+  \foreach \n in {mt5,strat,apex,risk,pg,exec} {
+    \draw[axarr, line width=1.2pt] (\n) -- (orch);
+  }
+  \draw[axarrgold] (exec.east) -- ++(0.6,0) |- (mt5.east)
+    node[pos=0.25, axlbl, below] {ciclo tick};
+
+  \begin{scope}[on background layer]
+    \node[
+      draw=AXNavy!30, dashed, rounded corners=12pt,
+      fit=(mt5)(strat)(apex)(risk)(pg)(exec)(orch),
+      inner sep=16pt, fill=AXIce!20
+    ] {};
+  \end{scope}
+\end{tikzpicture}
+\caption{Topología hub-and-spoke: un único proceso Python, multi-símbolo.}
+\end{figure}
+
+%==============================================================================
+\section{Jerarquía de decisión Apex (8 capas)}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  funnel/.style={
+    trapezium, trapezium left angle=78, trapezium right angle=78,
+    draw=AXNavy!60, line width=0.9pt,
+    minimum height=0.95cm, text width=9.2cm, align=center,
+    font=\small\sffamily,
+    #1
+  }
+]
+  \node[funnel, fill=red!12] (f1) {%
+    \textbf{\textcolor{red!65!black}{1 · RIESGO GLOBAL}}\\
+    {\footnotesize Drawdown · Hard stop · MetaRisk DEFENSIVE/AGGRESSIVE}};
+  \node[funnel, fill=orange!15, below=3mm of f1] (f2) {%
+    \textbf{2 · CONTEXTO HIPER} — HyperContextEngine (fusión multi-señal)};
+  \node[funnel, fill=yellow!18, below=3mm of f2] (f3) {%
+    \textbf{3 · RÉGIMEN / ESTADO LATENTE} — mercado peligroso · chop};
+  \node[funnel, fill=AXSand!80, below=3mm of f3] (f4) {%
+    \textbf{4 · MICROESTRUCTURA} — calidad · manipulación · velocidad};
+  \node[funnel, fill=AXLavender!70, below=3mm of f4] (f5) {%
+    \textbf{5 · MACHINE LEARNING} — umbral probabilístico · ensemble v2};
+  \node[funnel, fill=AXRose!50, below=3mm of f5] (f6) {%
+    \textbf{6 · SETUP RANKING} — grade A+ … X · memoria histórica};
+  \node[funnel, fill=AXTeal!60, below=3mm of f6] (f7) {%
+    \textbf{7 · CALIDAD DE EJECUCIÓN} — spread · ExecIntelligence};
+  \node[funnel, fill=AXMint!70, below=3mm of f7] (f8) {%
+    \textbf{8 · ENTRADA FINAL} — anti-overtrade · spacing · burst};
+
+  \node[
+    diamond, aspect=2.2, draw=AXGold, line width=1.8pt,
+    fill=AXGold!25, minimum width=5.5cm, align=center,
+    below=8mm of f8, font=\small\sffamily\bfseries  ] (out) {ALLOW TRADE\\[-2pt]{\footnotesize o BLOCK + razón de capa}};
+
+  \foreach \a/\b in {f1/f2,f2/f3,f3/f4,f4/f5,f5/f6,f6/f7,f7/f8,f8/out} {
+    \draw[axarr] (\a) -- (\b);
+  }
+\end{tikzpicture}
+\caption{Embudo de decisión institucional. Si la capa $n$ falla, las capas $n{+}1\ldots 8$ ni siquiera se evalúan.}
+\end{figure}
+
+%==============================================================================
+\section{Flujo operativo completo (12 pasos)}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  step/.style={
+    rectangle, rounded corners=4pt,
+    minimum width=2.15cm, minimum height=1.35cm,
+    align=center, font=\scriptsize\sffamily,
+    draw=#1!70, fill=#1!12, text=AXGraphite
+  }
+]
+  % Swimlane DATA
+  \node[step=AXIce, anchor=west] (s1) at (0,0) {\textbf{01}\\MT5\\Ticks};
+  \node[step=AXIce, right=2mm of s1] (s2) {\textbf{02}\\Market\\Layer};
+  \node[step=AXSand, right=2mm of s2] (s3) {\textbf{03}\\Instit.\\Analysis};
+
+  % Swimlane INTELLIGENCE
+  \node[step=AXLavender, right=2mm of s3] (s4) {\textbf{04}\\ML\\Predict};
+  \node[step=AXRose, right=2mm of s4] (s5) {\textbf{05}\\Apex\\Fusion};
+  \node[step=AXRose, right=2mm of s5] (s6) {\textbf{06}\\Hierarchy\\8 capas};
+
+  % Swimlane CONTROL
+  \node[step=AXRose, right=2mm of s6] (s7) {\textbf{07}\\Risk\\Gate};
+
+  % Swimlane EXEC + LEARN
+  \node[step=AXTeal, below=1.1cm of s1] (s8) {\textbf{08}\\Execute\\Order};
+  \node[step=AXTeal, right=2mm of s8] (s9) {\textbf{09}\\Exit\\AI};
+  \node[step=AXGraphite, right=2mm of s9] (s10) {\textbf{10}\\PostgreSQL\\Persist};
+  \node[step=AXNavyLight, right=2mm of s10] (s11) {\textbf{11}\\Self-\\Learning};
+  \node[step=AXGoldDark, right=2mm of s11] (s12) {\textbf{12}\\Auto\\Retrain};
+
+  \foreach \x/\y in {s1/s2,s2/s3,s3/s4,s4/s5,s5/s6,s6/s7} {
+    \draw[axarr] (\x) -- (\y);
+  }
+  \draw[axarr] (s7.south) ++(0,-0.15) -| (s8.north);
+  \foreach \x/\y in {s8/s9,s9/s10,s10/s11,s11/s12} {
+    \draw[axarr] (\x) -- (\y);
+  }
+  \draw[axarrgold] (s12.north) -- ++(0,0.55) -| node[axlbl, near start, above] {feedback modelos} (s4.north);
+
+  % Swimlane labels
+  \node[rotate=90, axlbl, anchor=south] at (-0.85,0.55) {DATOS};
+  \node[rotate=90, axlbl, anchor=south] at (-0.85,-1.35) {EJECUCIÓN \& APRENDIZAJE};
+
+  \begin{scope}[on background layer]
+    \draw[AXNavy!15, fill=AXIce!25, rounded corners=6pt]
+      (-1.1,-0.75) rectangle (16.2,1.15);
+    \draw[AXNavy!15, fill=AXMint!15, rounded corners=6pt]
+      (-1.1,-2.35) rectangle (16.2,-0.55);
+  \end{scope}
+\end{tikzpicture}%
+}
+\caption{Pipeline end-to-end con swimlanes y retroalimentación de retrain.}
+\end{figure}
+
+%==============================================================================
+\section{Pipeline Machine Learning}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  proc/.style={
+    rectangle, rounded corners=5pt,
+    minimum width=2.6cm, minimum height=1.2cm,
+    align=center, font=\footnotesize\sffamily,
+    draw=AXNavyLight, fill=white,
+    double=AXNavyLight, double distance=1.5pt
+  }
+]
+  \node[proc, fill=AXIce!50] (raw) {\textbf{Raw Data}\\MT5 + PG trades};
+  \node[proc, fill=AXSand!40, right=1.1cm of raw] (fe) {\textbf{Features v2}\\25+ variables};
+  \node[proc, fill=AXLavender!40, right=1.1cm of fe] (ens) {\textbf{Ensemble}\\RF·XGB·LGBM};
+  \node[proc, fill=AXRose!30, right=1.1cm of ens] (inf) {\textbf{Inference}\\$P_{buy}$ · $P_{sell}$};
+
+  \draw[axarr] (raw) -- node[axlbl, above] {build} (fe);
+  \draw[axarr] (fe) -- node[axlbl, above] {train} (ens);
+  \draw[axarr] (ens) -- node[axlbl, above] {predict} (inf);
+
+  \node[
+    rectangle, rounded corners=5pt, draw=AXGold!80!black, thick,
+    fill=AXGold!12, minimum width=3.2cm, minimum height=2cm,
+    below=1.3cm of ens, align=center, font=\footnotesize\sffamily
+  ] (rt) {\textbf{Retrain Loop}\\[2pt]
+    Walk-forward · OOS gate\\
+    Rollback · Hot-reload};
+
+  \draw[axarrgold] (inf.south) ++(0,-0.2) -| (rt.north);
+  \draw[axarrgold] (rt.west) -| node[axlbl, below, pos=0.3] {deploy PKL} (ens.south);
+  \draw[axarrgold] (raw.south) |- (rt.west);
+
+  \node[axlblw, above=2mm of inf] {QuantDecision};
+\end{tikzpicture}
+\caption{Pipeline ML con doble borde, bucle de retrain y validación OOS.}
+\end{figure}
+
+\textbf{Modelos:} RandomForest · LogisticRegression · XGBoost · LightGBM · Voting Ensemble.
+
+%==============================================================================
+\section{Base de datos PostgreSQL}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  db/.style={
+    rectangle, rounded corners=6pt, draw=AXNavy, line width=1.2pt,
+    fill=AXNavyLight!15, minimum width=3cm, minimum height=1.4cm,
+    align=center, font=\footnotesize\sffamily\bfseries, text=AXNavy
+  },
+  tab/.style={
+    rectangle, draw=AXNavyLight!70, rounded corners=4pt,
+    minimum width=3.4cm, minimum height=1.15cm, fill=white,
+    align=center, font=\small\sffamily
+  }
+]
+  \node[db] (pg) {PostgreSQL\\{\tiny Docker · aurionx}};
+
+  \node[tab, above right=0.85cm and 1.1cm of pg] (pred) {%
+    \textbf{ml\_predictions}\\{\scriptsize conf · probs · grade}};
+  \node[tab, right=0.65cm of pred] (feat) {%
+    \textbf{ml\_features}\\{\scriptsize vector v2 · sweeps}};
+  \node[tab, below right=0.85cm and 1.1cm of pg] (reg) {%
+    \textbf{ml\_regime}\\{\scriptsize vol · sesión · mode}};
+  \node[tab, right=0.65cm of reg] (perf) {%
+    \textbf{ml\_performance}\\{\scriptsize sharpe · expectancy}};
+
+  \draw[axarr] (pg) -- (pred);
+  \draw[axarr] (pg) -- (feat);
+  \draw[axarr] (pg) -- (reg);
+  \draw[axarr] (pg) -- (perf);
+  \draw[axarr] (pred) -- node[axlbl, above] {FK} (feat);
+  \draw[axarrgold] (perf) to[bend left=30] node[axlbl, right] {retrain} (pred);
+\end{tikzpicture}
+\caption{Modelo lógico de datos PostgreSQL y tablas ML.}
+\end{figure}
+
+%==============================================================================
+\section{Auto-aprendizaje y ciclo de evolución}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  phase/.style={
+    circle, minimum size=1.55cm, align=center,
+    font=\footnotesize\sffamily\bfseries, text=white
+  }
+]
+  \node[phase, fill=AXNavyLight] (p1) at (0,0) {1\\Gather};
+  \node[phase, fill=AXNavyLight!85!white] (p2) at ({60}:2.8cm) {2\\Analyze};
+  \node[phase, fill=AXGold!90!black] (p3) at ({120}:2.8cm) {3\\Patterns};
+  \node[phase, fill=AXGold!70!black] (p4) at ({180}:2.8cm) {4\\Weights};
+  \node[phase, fill=AXRose!70!black] (p5) at ({240}:2.8cm) {5\\Train};
+  \node[phase, fill=AXRose!50!black] (p6) at ({300}:2.8cm) {6\\Validate};
+  \node[phase, fill=AXMint!70!black] (p7) at ({0}:2.8cm) {7\\Deploy};
+
+  \foreach \a/\b in {p1/p2,p2/p3,p3/p4,p4/p5,p5/p6,p6/p7,p7/p1} {
+    \draw[axarr, line width=1.3pt] (\a) -- (\b);
+  }
+  \node[align=center, font=\small\sffamily\bfseries, text=AXNavy] at (0,0) {%
+    AUTO\\EVOLVE
+  };
+  \node[axlbl, below=3.6cm of p4] {Cada 10 cierres · Diario 22:00 UTC · Degradación · Cambio régimen};
+\end{tikzpicture}
+\caption{Ciclo cerrado de auto-aprendizaje (diagrama radial).}
+\end{figure}
+
+%==============================================================================
+\section{Gestión de riesgo y prop firm}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+  \node[
+    regular polygon, regular polygon sides=6, minimum size=3.2cm,
+    draw=AXNavy, line width=1.5pt, fill=AXRose!25,
+    align=center, font=\footnotesize\sffamily  ] (shield) at (0,0) {%
+    \textbf{RISK}\\[-2pt]\textbf{SHIELD}
+  };
+
+  \node[
+    rectangle, rounded corners=4pt, minimum width=2.9cm, minimum height=0.95cm,
+    draw=AXGold!80!black, fill=AXSand!50, align=center, font=\scriptsize\sffamily,
+    above left=1.2cm and 0.3cm of shield
+  ] (fp) {\textbf{FundingPips}\\DD diario · DD total};
+  \node[rectangle, rounded corners=4pt, minimum width=2.9cm, minimum height=0.95cm,
+    draw=AXNavyLight, fill=AXLavender!30, align=center, font=\scriptsize\sffamily,
+    above right=1.2cm and 0.3cm of shield] (mr) {\textbf{MetaRisk}\\DEF · AGG · NEUT};
+  \node[rectangle, rounded corners=4pt, minimum width=2.9cm, minimum height=0.95cm,
+    draw=red!50, fill=red!8, align=center, font=\scriptsize\sffamily,
+    below left=1.2cm and 0.3cm of shield] (ao) {\textbf{Anti-OT}\\spacing · burst};
+  \node[rectangle, rounded corners=4pt, minimum width=2.9cm, minimum height=0.95cm,
+    draw=AXMint!70!black, fill=AXMint!30, align=center, font=\scriptsize\sffamily,
+    below right=1.2cm and 0.3cm of shield] (mc) {\textbf{Monte Carlo}\\lot factor};
+
+  \foreach \n in {fp,mr,ao,mc} {
+    \draw[axarr] (\n) -- (shield);
+  }
+
+  \node[
+    rectangle, rounded corners=6pt, draw=AXNavy, line width=1.2pt,
+    fill=AXGold!20, minimum width=4.5cm, minimum height=0.9cm,
+    below=1.8cm of shield, font=\small\sffamily\bfseries  ] (gate) {GATE DE ENTRADA — approve / block};
+
+  \draw[axarr, line width=1.4pt] (shield) -- (gate);
+\end{tikzpicture}
+\caption{Escudo de riesgo multicapa antes de \texttt{order\_send}.}
+\end{figure}
+
+%==============================================================================
+\section{Diagrama de secuencia (tick $\rightarrow$ trade)}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  life/.style={rectangle, draw=AXNavyLight, fill=AXIce!40, minimum width=1.35cm,
+    minimum height=0.65cm, font=\scriptsize\sffamily\bfseries},
+  msg/.style={-{Stealth[length=2mm]}, line width=0.9pt, draw=AXNavyLight}
+]
+  \node[life] (mt5) at (0,0) {MT5};
+  \node[life, right=1.5cm of mt5] (orch) {Orch.};
+  \node[life, right=1.5cm of orch] (apex) {Apex};
+  \node[life, right=1.5cm of apex] (risk) {Risk};
+  \node[life, right=1.5cm of risk] (brok) {Broker};
+
+  \foreach \n in {mt5,orch,apex,risk,brok} {
+    \draw[AXNavyLight!40, dashed] (\n.south) -- ++(0,-5.2);
+  }
+
+  \draw[msg] ([yshift=-0.8cm]mt5.east) -- node[axlbl, above] {tick} ([yshift=-0.8cm]orch.west);
+  \draw[msg] ([yshift=-1.5cm]orch.east) -- node[axlbl, above] {evaluate} ([yshift=-1.5cm]apex.west);
+  \draw[msg] ([yshift=-2.2cm]apex.east) -- node[axlbl, above] {allow?} ([yshift=-2.2cm]risk.west);
+  \draw[msg] ([yshift=-3.0cm]orch.east) -- node[axlbl, above] {order} ([yshift=-3.0cm]brok.west);
+  \draw[msg, dashed] ([yshift=-3.8cm]brok.west) -- node[axlbl, below] {fill} ([yshift=-3.8cm]orch.east);
+  \draw[msg, axarrgold] ([yshift=-4.6cm]orch.south) ++(-0.5,0) -- ++(-0.5,-0.5)
+    node[axlbl, left] {persist PG} ++(1,0);
+
+  \node[axlblw, below=5.6cm of brok] {Secuencia simplificada en vivo};
+\end{tikzpicture}
+\caption{Interacción temporal entre componentes en un ciclo de entrada.}
+\end{figure}
+
+%==============================================================================
+\section{Microestructura, salidas y régimenes}
+%==============================================================================
+
+\textbf{Microestructura:} sweeps · fake breakouts · absorción · manipulación · liquidity grabs · stop hunts.
+
+\textbf{TradeExitAI:} momentum loss · agotamiento · absorción contraria · compresión · partial TP.
+
+\textbf{Régimenes:} trend · range · breakout · defensive · high volatility — transición vía \texttt{MarketRegimeSwitcher}.
+
+%==============================================================================
+\section{Dashboard y tecnologías}
+%==============================================================================
+
+Dashboard HTTP (\texttt{127.0.0.1:8765}): equity · winrate · setups · drawdown · confianza ML.
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\textbf{Python} & \textbf{MT5} & \textbf{PostgreSQL} & \textbf{Sklearn / XGB / LGBM} \\
+\midrule
+Docker & Pandas & NumPy & SQLAlchemy \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%==============================================================================
+\section{Comparativa y conclusión}
+%==============================================================================
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+  \begin{axis}[
+    ybar,
+    bar width=14pt,
+    ymin=0, ymax=100,
+    ytick={0,25,50,75,100},
+    symbolic x coords={Contexto,ML,Memoria,Riesgo,Adapt.},
+    xtick=data,
+    width=11cm, height=5cm,
+    axis lines*=left,
+    tick label style={font=\footnotesize\sffamily},
+    nodes near coords,
+    nodes near coords align={vertical},
+    every node near coord/.append style={font=\tiny\sffamily}
+  ]
+  \addplot[fill=red!25, draw=red!50] coordinates {
+    (Contexto,18) (ML,22) (Memoria,12) (Riesgo,15) (Adapt.,10)
+  };
+  \addplot[fill=AXNavyLight!60, draw=AXNavy] coordinates {
+    (Contexto,92) (ML,88) (Memoria,95) (Riesgo,90) (Adapt.,87)
+  };
+  \legend{Bot retail típico,AURION X 3.0}
+  \end{axis}
+\end{tikzpicture}
+\caption{Madurez relativa por dimensión (índice cualitativo 0–100).}
+\end{figure}
+
+\begin{axcallout}{title=Conclusión}
+\textbf{AURION\_X 3.0} evoluciona de un EA tradicional hacia un \textbf{sistema cuantitativo institucional auto-adaptativo}: aprende, protege capital, fusiona contexto profundo y mejora continuamente — arquitectura modular orientada a consistencia y supervivencia estadística en mercados reales y prop firms.
+\end{axcallout}
+
+\vfill
+\begin{center}
+\footnotesize\sffamily
+\textcolor{AXNavy}{\textbf{AURION X 3.0 / APEX ENGINE}}\\
+\texttt{docs/AURION\_X\_APEX\_ARCHITECTURE.tex} · Compilar con pdfLaTeX o Overleaf
+\end{center}
+
+\end{document}

@@ -1,0 +1,662 @@
+//+------------------------------------------------------------------+
+//|                                       AURION_SMC_Visualizer.mq5  |
+//|        AURION X 4.1 - Dibujo PRECISO de BOS / CHOCH / OB / FVG / |
+//|        Liquidity sobre el chart de MetaTrader 5 con timestamps   |
+//|        EXACTOS del candle de origen (no aproximaciones por bars).|
+//|                                                                    |
+//|   Fuente: HTTP GET http://<host>:<port>/api/smc/<SYMBOL>.txt       |
+//|   Formato pipe v2 con ISO 8601 + ID estable por elemento.          |
+//|                                                                    |
+//|   MEJORAS v2:                                                      |
+//|   - Anchors por timestamp ISO (StringToTime) -> precisión candle.  |
+//|   - Tracking incremental: solo borra IDs que desaparecen, no       |
+//|     redibuja todo en cada refresh (cero flicker).                  |
+//|   - Colores por estado: FRESH saturado, MITIGATED claro,           |
+//|     INVALIDATED omitido (configurable).                            |
+//|   - Width por strength (>=0.85 width 3, >=0.7 width 2, sino 1).    |
+//|   - Anti-solape de etiquetas por bucket de precio (~ATR/5).        |
+//|   - Filtro minStrength + maxAgeBars por TF para no inundar chart.  |
+//|                                                                    |
+//|   INSTRUCCIONES MT5                                                 |
+//|   1) Copia este .mq5 a <MT5>\MQL5\Experts\                          |
+//|   2) Tools > Options > Expert Advisors: marcar "Allow WebRequest"  |
+//|      y añadir URL: http://127.0.0.1:8765                            |
+//|   3) F7 compilar; arrastrar EA al chart XAUUSD.                    |
+//+------------------------------------------------------------------+
+#property copyright "AURION X 4.1"
+#property version   "2.00"
+#property strict
+#property description "Visualizador SMC con timestamps EXACTOS + tracking incremental."
+
+//================ Inputs =====================================================
+input string  DashboardHost      = "127.0.0.1";
+input int     DashboardPort      = 8765;
+input string  Symbol_            = "XAUUSD";
+input int     RefreshSeconds     = 6;
+input int     RequestTimeoutMs   = 3500;
+input int     LimitPerTF         = 25;
+
+// What to draw
+input bool    DrawOB             = true;
+input bool    DrawBOS            = true;
+input bool    DrawCHOCH          = true;
+input bool    DrawFVG            = true;
+input bool    DrawLIQ            = true;
+input bool    DrawINVALIDATED    = false; // mostrar OB/FVG invalidados
+
+// Filters (anti-clutter)
+input double  MinStrength        = 0.30;  // ignora elementos con strength < umbral
+input int     MaxAgeBars         = 600;   // ignora elementos cuyo TF*age sobrepase N velas del chart actual
+input int     ExtendBars         = 80;    // longitud (en velas del TF del elemento) hacia el futuro
+
+// Colors - FRESH (saturados)
+input color   OBBullColor        = clrSeaGreen;
+input color   OBBearColor        = clrCrimson;
+input color   FVGBullColor       = clrTeal;
+input color   FVGBearColor       = clrMaroon;
+input color   BOSColor           = clrDodgerBlue;
+input color   CHOCHColor         = clrGold;
+input color   LIQColor           = clrViolet;
+// Colors - MITIGATED (claros/grisáceos)
+input color   OBBullMitColor     = clrDarkSeaGreen;
+input color   OBBearMitColor     = clrLightSalmon;
+input color   FVGBullMitColor    = clrLightSeaGreen;
+input color   FVGBearMitColor    = clrDarkSalmon;
+
+input int     LabelFontSize      = 8;
+input bool    ShowConfluence     = true;
+
+//================ Globals ====================================================
+const string  OBJ_PREFIX = "AURION_SMC_";
+datetime      g_lastFetch = 0;
+int           g_drawn     = 0;
+int           g_pruned    = 0;
+
+// IDs vistos en el refresh actual (se setean a 1 al re-emitirlos)
+string        g_active_ids[];
+int           g_active_count = 0;
+
+//+------------------------------------------------------------------+
+//| OnInit                                                            |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   EventSetTimer(MathMax(1, RefreshSeconds));
+   PrintFormat("[AURION SMC v2] http://%s:%d symbol=%s refresh=%ds limit=%d minStrength=%.2f maxAge=%d",
+               DashboardHost, DashboardPort, Symbol_, RefreshSeconds, LimitPerTF, MinStrength, MaxAgeBars);
+   FetchAndDraw();
+   return INIT_SUCCEEDED;
+  }
+
+void OnDeinit(const int reason)
+  {
+   EventKillTimer();
+   ClearAll();
+   PrintFormat("[AURION SMC v2] detenido (reason=%d). Objetos eliminados.", reason);
+  }
+
+void OnTimer() { FetchAndDraw(); }
+
+//+------------------------------------------------------------------+
+//| FetchAndDraw - core                                               |
+//+------------------------------------------------------------------+
+void FetchAndDraw()
+  {
+   string url = StringFormat("http://%s:%d/api/smc/%s.txt?limit=%d",
+                             DashboardHost, DashboardPort, Symbol_, LimitPerTF);
+   string body = "";
+   if(!HttpGet(url, body))
+     {
+      PrintFormat("[AURION SMC v2] WebRequest FAIL url=%s. ¿WebRequest permitido y bot corriendo?", url);
+      return;
+     }
+   if(StringLen(body) < 5)
+     {
+      Print("[AURION SMC v2] respuesta vacía.");
+      return;
+     }
+
+   // Reset active_ids set
+   ArrayResize(g_active_ids, 0);
+   g_active_count = 0;
+
+   // Para anti-solape de etiquetas
+   double bucketsPx[];
+   int    bucketsN = 0;
+   double atr = ChartATRApprox();
+   double bucketStep = MathMax(atr * 0.20, _Point * 50); // ~ATR/5 o 50pt min
+
+   string lines[];
+   int n = StringSplit(body, '\n', lines);
+   int drawn = 0;
+   for(int i = 0; i < n; i++)
+     {
+      string ln = TrimAll(lines[i]);
+      if(StringLen(ln) == 0) continue;
+      if(StringFind(ln, "#") == 0) continue;
+      if(ln == "END") break;
+      if(DrawSMCLine(ln, bucketsPx, bucketsN, bucketStep)) drawn++;
+     }
+
+   // Prune: borrar todos los objetos AURION cuyo ID ya no esté en g_active_ids.
+   int pruned = PruneStaleObjects();
+   g_drawn  = drawn;
+   g_pruned = pruned;
+   g_lastFetch = TimeCurrent();
+   ChartRedraw(0);
+  }
+
+//+------------------------------------------------------------------+
+//| HttpGet                                                           |
+//+------------------------------------------------------------------+
+bool HttpGet(const string url, string &out_body)
+  {
+   char post[];
+   char result[];
+   string result_headers;
+   string headers = "Accept: text/plain\r\n";
+   ResetLastError();
+   int res = WebRequest("GET", url, headers, RequestTimeoutMs, post, result, result_headers);
+   if(res == -1)
+     {
+      int err = GetLastError();
+      PrintFormat("[AURION SMC v2] WebRequest err=%d url=%s", err, url);
+      return false;
+     }
+   if(res < 200 || res >= 300)
+     {
+      PrintFormat("[AURION SMC v2] WebRequest HTTP=%d url=%s", res, url);
+      return false;
+     }
+   out_body = CharArrayToString(result, 0, ArraySize(result), CP_UTF8);
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| Router por kind                                                   |
+//+------------------------------------------------------------------+
+bool DrawSMCLine(const string ln, double &bucketsPx[], int &bucketsN, const double bucketStep)
+  {
+   string p[];
+   int np = StringSplit(ln, '|', p);
+   if(np < 3) return false;
+   string kind = p[0];
+   if(kind == "OB"    && DrawOB)        return DrawOBRect(p, np, bucketsPx, bucketsN, bucketStep);
+   if(kind == "BOS"   && DrawBOS)       return DrawBOSObj(p, np, bucketsPx, bucketsN, bucketStep);
+   if(kind == "CHOCH" && DrawCHOCH)     return DrawCHOCHObj(p, np, bucketsPx, bucketsN, bucketStep);
+   if(kind == "FVG"   && DrawFVG)       return DrawFVGRect(p, np, bucketsPx, bucketsN, bucketStep);
+   if(kind == "LIQ"   && DrawLIQ)       return DrawLIQObj(p, np, bucketsPx, bucketsN, bucketStep);
+   if(kind == "CONF"  && ShowConfluence) return DrawConfluence(p, np);
+   return false;
+  }
+
+//+------------------------------------------------------------------+
+//| OB                                                                |
+//| OB|id|tf|dir|open_time|mitigation_time|bottom|top|state|strength|quality|freshness
+//+------------------------------------------------------------------+
+bool DrawOBRect(const string &p[], int np, double &bucketsPx[], int &bucketsN, const double bucketStep)
+  {
+   if(np < 12) return false;
+   string id    = p[1];
+   string tf    = p[2];
+   string dir   = p[3];
+   datetime t0  = IsoToTime(p[4]);
+   datetime tMit= IsoToTime(p[5]);
+   double bot   = StrToDoubleOrZero(p[6]);
+   double top   = StrToDoubleOrZero(p[7]);
+   string state = p[8];
+   double st    = StrToDoubleOrZero(p[9]);
+   double qu    = StrToDoubleOrZero(p[10]);
+   double frsh  = StrToDoubleOrZero(p[11]);
+
+   if(!ShouldDraw(tf, t0, st, state, /*allowInvalid*/ false)) return false;
+   if(top <= bot) { double tmp=bot; bot=top; top=tmp; }
+
+   bool isFresh    = (state == "FRESH");
+   bool isMitigated= (state == "MITIGATED");
+   bool isInvalid  = (state == "INVALIDATED");
+   if(isInvalid && !DrawINVALIDATED) return false;
+
+   // t2: si hay mitigación usamos ese tiempo; si no, extendemos N velas hacia adelante.
+   datetime t2 = (tMit > 0) ? tMit : ExtendForward(tf, ExtendBars);
+
+   color col;
+   if(isMitigated)
+      col = (dir == "BULLISH") ? OBBullMitColor : OBBearMitColor;
+   else
+      col = (dir == "BULLISH") ? OBBullColor : OBBearColor;
+   if(isInvalid) col = clrDimGray;
+
+   string name = OBJ_PREFIX + "OB_" + id;
+   RegisterId(name);
+
+   if(ObjectFind(0, name) < 0)
+     {
+      if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, t0, top, t2, bot)) return false;
+     }
+   ObjectSetInteger(0, name, OBJPROP_TIME, 0, t0);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 0, top);
+   ObjectSetInteger(0, name, OBJPROP_TIME, 1, t2);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 1, bot);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, col);
+   ObjectSetInteger(0, name, OBJPROP_STYLE, isMitigated ? STYLE_DOT : STYLE_SOLID);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, WidthForStrength(st));
+   ObjectSetInteger(0, name, OBJPROP_BACK, true);
+   ObjectSetInteger(0, name, OBJPROP_FILL, !isInvalid);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+
+   string label = StringFormat("OB %s %s S=%.2f Q=%.2f F=%.2f [%s]", tf, dir, st, qu, frsh, state);
+   double labelPrice = AntiOverlapPrice(top, bucketsPx, bucketsN, bucketStep);
+   PaintLabel(name + "_lbl", t0, labelPrice, col, label);
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| BOS                                                               |
+//| BOS|id|tf|dir|broken_swing_time|break_time|broken_swing_price|break_price|strength|quality|reliability
+//+------------------------------------------------------------------+
+bool DrawBOSObj(const string &p[], int np, double &bucketsPx[], int &bucketsN, const double bucketStep)
+  {
+   if(np < 11) return false;
+   string id    = p[1];
+   string tf    = p[2];
+   string dir   = p[3];
+   datetime tSw = IsoToTime(p[4]);
+   datetime tBk = IsoToTime(p[5]);
+   double pSw   = StrToDoubleOrZero(p[6]);
+   double pBk   = StrToDoubleOrZero(p[7]);
+   double st    = StrToDoubleOrZero(p[8]);
+   double qu    = StrToDoubleOrZero(p[9]);
+   double rl    = StrToDoubleOrZero(p[10]);
+   if(!ShouldDraw(tf, tSw, st, "", true)) return false;
+
+   string nameH = OBJ_PREFIX + "BOS_H_" + id;
+   string nameB = OBJ_PREFIX + "BOS_B_" + id;
+   RegisterId(nameH);
+   RegisterId(nameB);
+
+   // 1) Línea HORIZONTAL al precio del swing roto: desde el swing hasta extensión.
+   datetime t2 = ExtendForward(tf, ExtendBars);
+   if(ObjectFind(0, nameH) < 0)
+      ObjectCreate(0, nameH, OBJ_TREND, 0, tSw, pSw, t2, pSw);
+   ObjectSetInteger(0, nameH, OBJPROP_TIME, 0, tSw);
+   ObjectSetDouble (0, nameH, OBJPROP_PRICE, 0, pSw);
+   ObjectSetInteger(0, nameH, OBJPROP_TIME, 1, t2);
+   ObjectSetDouble (0, nameH, OBJPROP_PRICE, 1, pSw);
+   ObjectSetInteger(0, nameH, OBJPROP_COLOR, BOSColor);
+   ObjectSetInteger(0, nameH, OBJPROP_STYLE, STYLE_DASH);
+   ObjectSetInteger(0, nameH, OBJPROP_WIDTH, WidthForStrength(st));
+   ObjectSetInteger(0, nameH, OBJPROP_RAY_RIGHT, false);
+   ObjectSetInteger(0, nameH, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, nameH, OBJPROP_SELECTABLE, false);
+
+   // 2) "Brújula" del break: pequeña arrow en t_break, precio del break.
+   if(ObjectFind(0, nameB) < 0)
+      ObjectCreate(0, nameB, OBJ_ARROW, 0, tBk, pBk);
+   ObjectSetInteger(0, nameB, OBJPROP_TIME, 0, tBk);
+   ObjectSetDouble (0, nameB, OBJPROP_PRICE, 0, pBk);
+   ObjectSetInteger(0, nameB, OBJPROP_ARROWCODE, (dir == "BULLISH") ? 233 : 234);
+   ObjectSetInteger(0, nameB, OBJPROP_COLOR, BOSColor);
+   ObjectSetInteger(0, nameB, OBJPROP_WIDTH, 2);
+   ObjectSetInteger(0, nameB, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, nameB, OBJPROP_SELECTABLE, false);
+
+   string label = StringFormat("BOS %s %s S=%.2f Q=%.2f R=%.2f", tf, dir, st, qu, rl);
+   double labelPrice = AntiOverlapPrice(pSw, bucketsPx, bucketsN, bucketStep);
+   PaintLabel(nameH + "_lbl", tBk, labelPrice, BOSColor, label);
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| CHOCH                                                             |
+//| CHOCH|id|tf|dir|kind|broken_swing_time|break_time|broken_swing_price|break_price|strength|quality
+//+------------------------------------------------------------------+
+bool DrawCHOCHObj(const string &p[], int np, double &bucketsPx[], int &bucketsN, const double bucketStep)
+  {
+   if(np < 11) return false;
+   string id    = p[1];
+   string tf    = p[2];
+   string dir   = p[3];
+   string kind  = p[4];
+   datetime tSw = IsoToTime(p[5]);
+   datetime tBk = IsoToTime(p[6]);
+   double pSw   = StrToDoubleOrZero(p[7]);
+   double pBk   = StrToDoubleOrZero(p[8]);
+   double st    = StrToDoubleOrZero(p[9]);
+   double qu    = StrToDoubleOrZero(p[10]);
+   if(!ShouldDraw(tf, tSw, st, "", true)) return false;
+
+   string nameH = OBJ_PREFIX + "CHOCH_H_" + id;
+   string nameB = OBJ_PREFIX + "CHOCH_B_" + id;
+   RegisterId(nameH);
+   RegisterId(nameB);
+   datetime t2 = ExtendForward(tf, ExtendBars);
+
+   if(ObjectFind(0, nameH) < 0)
+      ObjectCreate(0, nameH, OBJ_TREND, 0, tSw, pSw, t2, pSw);
+   ObjectSetInteger(0, nameH, OBJPROP_TIME, 0, tSw);
+   ObjectSetDouble (0, nameH, OBJPROP_PRICE, 0, pSw);
+   ObjectSetInteger(0, nameH, OBJPROP_TIME, 1, t2);
+   ObjectSetDouble (0, nameH, OBJPROP_PRICE, 1, pSw);
+   ObjectSetInteger(0, nameH, OBJPROP_COLOR, CHOCHColor);
+   ObjectSetInteger(0, nameH, OBJPROP_STYLE, (kind == "MAJOR") ? STYLE_SOLID : STYLE_DASH);
+   ObjectSetInteger(0, nameH, OBJPROP_WIDTH, WidthForStrength(st));
+   ObjectSetInteger(0, nameH, OBJPROP_RAY_RIGHT, false);
+   ObjectSetInteger(0, nameH, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, nameH, OBJPROP_SELECTABLE, false);
+
+   if(ObjectFind(0, nameB) < 0)
+      ObjectCreate(0, nameB, OBJ_ARROW, 0, tBk, pBk);
+   ObjectSetInteger(0, nameB, OBJPROP_TIME, 0, tBk);
+   ObjectSetDouble (0, nameB, OBJPROP_PRICE, 0, pBk);
+   ObjectSetInteger(0, nameB, OBJPROP_ARROWCODE, (dir == "BULLISH") ? 217 : 218);
+   ObjectSetInteger(0, nameB, OBJPROP_COLOR, CHOCHColor);
+   ObjectSetInteger(0, nameB, OBJPROP_WIDTH, 2);
+   ObjectSetInteger(0, nameB, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, nameB, OBJPROP_SELECTABLE, false);
+
+   string label = StringFormat("CHOCH %s %s %s S=%.2f Q=%.2f", tf, dir, kind, st, qu);
+   double labelPrice = AntiOverlapPrice(pSw, bucketsPx, bucketsN, bucketStep);
+   PaintLabel(nameH + "_lbl", tBk, labelPrice, CHOCHColor, label);
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| FVG                                                               |
+//| FVG|id|tf|dir|open_time|inverted_at|bottom|top|state|strength|fill_pct
+//+------------------------------------------------------------------+
+bool DrawFVGRect(const string &p[], int np, double &bucketsPx[], int &bucketsN, const double bucketStep)
+  {
+   if(np < 11) return false;
+   string id    = p[1];
+   string tf    = p[2];
+   string dir   = p[3];
+   datetime t0  = IsoToTime(p[4]);
+   datetime tInv= IsoToTime(p[5]);
+   double bot   = StrToDoubleOrZero(p[6]);
+   double top   = StrToDoubleOrZero(p[7]);
+   string state = p[8];
+   double st    = StrToDoubleOrZero(p[9]);
+   double fp    = StrToDoubleOrZero(p[10]);
+   if(!ShouldDraw(tf, t0, st, state, false)) return false;
+   if(top <= bot) { double tmp=bot; bot=top; top=tmp; }
+
+   bool isFilled = (state == "FILLED");
+   bool isInverted = (state == "INVERTED");
+   bool isPartial = (state == "PARTIAL");
+   if(isFilled && !DrawINVALIDATED) return false;
+
+   datetime t2 = (tInv > 0) ? tInv : ExtendForward(tf, ExtendBars);
+   color col;
+   if(isInverted)
+      col = (dir == "BULLISH") ? FVGBearMitColor : FVGBullMitColor; // dirección invertida
+   else if(isPartial)
+      col = (dir == "BULLISH") ? FVGBullMitColor : FVGBearMitColor;
+   else
+      col = (dir == "BULLISH") ? FVGBullColor : FVGBearColor;
+
+   string name = OBJ_PREFIX + "FVG_" + id;
+   RegisterId(name);
+   if(ObjectFind(0, name) < 0)
+      ObjectCreate(0, name, OBJ_RECTANGLE, 0, t0, top, t2, bot);
+   ObjectSetInteger(0, name, OBJPROP_TIME, 0, t0);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 0, top);
+   ObjectSetInteger(0, name, OBJPROP_TIME, 1, t2);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 1, bot);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, col);
+   ObjectSetInteger(0, name, OBJPROP_STYLE, STYLE_DOT);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, 1);
+   ObjectSetInteger(0, name, OBJPROP_BACK, true);
+   ObjectSetInteger(0, name, OBJPROP_FILL, true);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+
+   string label = StringFormat("FVG %s %s S=%.2f fill=%.0f%% [%s]", tf, dir, st, fp * 100.0, state);
+   double labelPrice = AntiOverlapPrice(top, bucketsPx, bucketsN, bucketStep);
+   PaintLabel(name + "_lbl", t0, labelPrice, col, label);
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| LIQ                                                               |
+//| LIQ|id|tf|kind|open_time|swept_at|price|bound_low|bound_high|score|swept
+//+------------------------------------------------------------------+
+bool DrawLIQObj(const string &p[], int np, double &bucketsPx[], int &bucketsN, const double bucketStep)
+  {
+   if(np < 11) return false;
+   string id   = p[1];
+   string tf   = p[2];
+   string kind = p[3];
+   datetime t0 = IsoToTime(p[4]);
+   datetime tSw= IsoToTime(p[5]);
+   double price= StrToDoubleOrZero(p[6]);
+   double bl   = StrToDoubleOrZero(p[7]);
+   double bh   = StrToDoubleOrZero(p[8]);
+   double sc   = StrToDoubleOrZero(p[9]);
+   bool sw     = (p[10] == "1" || p[10] == "True" || p[10] == "true");
+   if(!ShouldDraw(tf, t0, sc, "", true)) return false;
+
+   string name = OBJ_PREFIX + "LIQ_" + id;
+   RegisterId(name);
+   datetime t2 = (sw && tSw > 0) ? tSw : ExtendForward(tf, ExtendBars);
+   if(ObjectFind(0, name) < 0)
+      ObjectCreate(0, name, OBJ_TREND, 0, t0, price, t2, price);
+   ObjectSetInteger(0, name, OBJPROP_TIME, 0, t0);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 0, price);
+   ObjectSetInteger(0, name, OBJPROP_TIME, 1, t2);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 1, price);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, sw ? clrGray : LIQColor);
+   ObjectSetInteger(0, name, OBJPROP_STYLE, sw ? STYLE_DASHDOT : STYLE_DOT);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, WidthForStrength(sc));
+   ObjectSetInteger(0, name, OBJPROP_RAY_RIGHT, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+
+   string lbl = StringFormat("%s %s s=%.2f%s", kind, tf, sc, sw ? " SWEPT" : "");
+   double labelPrice = AntiOverlapPrice(price, bucketsPx, bucketsN, bucketStep);
+   PaintLabel(name + "_lbl", t0, labelPrice, sw ? clrGray : LIQColor, lbl);
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| Confluence (panel info en esquina)                                |
+//+------------------------------------------------------------------+
+bool DrawConfluence(const string &p[], int np)
+  {
+   if(np < 9) return false;
+   string dirBias = p[4];
+   double score   = StrToDoubleOrZero(p[5]);
+   string macro   = p[6];
+   string inst    = p[7];
+   string op_     = p[8];
+   string name = OBJ_PREFIX + "_CONF_PANEL";
+   RegisterId(name);
+   if(ObjectFind(0, name) < 0)
+      ObjectCreate(0, name, OBJ_LABEL, 0, 0, 0);
+   ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, 12);
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, 24);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, LabelFontSize + 2);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, (dirBias == "BULLISH") ? clrLimeGreen : (dirBias == "BEARISH") ? clrTomato : clrSilver);
+   ObjectSetString(0, name, OBJPROP_TEXT,
+      StringFormat("AURION SMC | bias=%s  conf=%.2f  macro=%s  inst=%s  op=%s",
+                   dirBias, score, macro, inst, op_));
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| Helpers                                                           |
+//+------------------------------------------------------------------+
+bool ShouldDraw(const string tf, const datetime t0, const double strength,
+                const string state, const bool ignoreStateFilter)
+  {
+   if(strength < MinStrength) return false;
+   if(t0 > 0)
+     {
+      // Maximum age en velas del TF del elemento.
+      ENUM_TIMEFRAMES e = StrToTimeframe(tf);
+      int secs = PeriodSeconds(e);
+      if(secs <= 0) secs = PeriodSeconds(PERIOD_M15);
+      int ageBars = (int)((TimeCurrent() - t0) / secs);
+      if(ageBars > MaxAgeBars) return false;
+     }
+   if(!ignoreStateFilter && state == "INVALIDATED" && !DrawINVALIDATED) return false;
+   return true;
+  }
+
+int WidthForStrength(const double s)
+  {
+   if(s >= 0.85) return 3;
+   if(s >= 0.70) return 2;
+   return 1;
+  }
+
+double AntiOverlapPrice(const double price, double &bucketsPx[], int &bucketsN, const double step)
+  {
+   // Si ya hay otra label en un bucket cercano, desplaza la label step/2 hacia arriba.
+   double p = price;
+   for(int k = 0; k < bucketsN; k++)
+     {
+      if(MathAbs(p - bucketsPx[k]) < step)
+        {
+         p += step * 0.6;
+         k = -1; // reiniciar comprobación
+        }
+     }
+   ArrayResize(bucketsPx, bucketsN + 1);
+   bucketsPx[bucketsN] = p;
+   bucketsN++;
+   return p;
+  }
+
+double ChartATRApprox()
+  {
+   // Aproximación ATR usando ATR(14) del chart actual.
+   int handle = iATR(_Symbol, PERIOD_CURRENT, 14);
+   if(handle == INVALID_HANDLE) return 0.0;
+   double buf[];
+   if(CopyBuffer(handle, 0, 0, 1, buf) <= 0) return 0.0;
+   return buf[0];
+  }
+
+datetime IsoToTime(const string iso)
+  {
+   if(StringLen(iso) < 10) return 0;
+   // StringToTime de MQL5 acepta "YYYY-MM-DD HH:MM:SS" sin TZ.
+   // El formato del dashboard es "YYYY-MM-DDTHH:MM:SS[.ffff]+00:00".
+   string s = iso;
+   StringReplace(s, "T", " ");
+   // Quitar offset TZ "+00:00" o "Z".
+   int pos = StringFind(s, "+");
+   if(pos < 0) pos = StringFind(s, "Z");
+   if(pos > 10) s = StringSubstr(s, 0, pos);
+   // Quitar fracción de segundo ".ffff".
+   int dot = StringFind(s, ".");
+   if(dot > 10) s = StringSubstr(s, 0, dot);
+   return StringToTime(s);
+  }
+
+datetime ExtendForward(const string tf, const int barsAhead)
+  {
+   ENUM_TIMEFRAMES e = StrToTimeframe(tf);
+   int secs = PeriodSeconds(e);
+   if(secs <= 0) secs = PeriodSeconds(PERIOD_M15);
+   return TimeCurrent() + (datetime)(barsAhead * secs);
+  }
+
+ENUM_TIMEFRAMES StrToTimeframe(const string s)
+  {
+   if(s == "M1")  return PERIOD_M1;
+   if(s == "M5")  return PERIOD_M5;
+   if(s == "M15") return PERIOD_M15;
+   if(s == "M30") return PERIOD_M30;
+   if(s == "H1")  return PERIOD_H1;
+   if(s == "H4")  return PERIOD_H4;
+   if(s == "D1")  return PERIOD_D1;
+   if(s == "W1")  return PERIOD_W1;
+   if(s == "MN1") return PERIOD_MN1;
+   return PERIOD_M15;
+  }
+
+double StrToDoubleOrZero(const string s)
+  {
+   if(StringLen(s) == 0) return 0.0;
+   return StringToDouble(s);
+  }
+
+string TrimAll(const string s)
+  {
+   string r = s;
+   StringReplace(r, "\r", "");
+   StringTrimLeft(r);
+   StringTrimRight(r);
+   return r;
+  }
+
+//+------------------------------------------------------------------+
+//| Labels                                                            |
+//+------------------------------------------------------------------+
+void PaintLabel(const string name, datetime t, double price, color col, const string text)
+  {
+   if(ObjectFind(0, name) < 0)
+      ObjectCreate(0, name, OBJ_TEXT, 0, t, price);
+   ObjectSetInteger(0, name, OBJPROP_TIME, 0, t);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 0, price);
+   ObjectSetString(0, name, OBJPROP_TEXT, text);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, col);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, LabelFontSize);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, name, OBJPROP_BACK, false);
+   ObjectSetInteger(0, name, OBJPROP_ANCHOR, ANCHOR_LEFT_LOWER);
+  }
+
+//+------------------------------------------------------------------+
+//| Active-IDs tracking                                                |
+//+------------------------------------------------------------------+
+void RegisterId(const string objName)
+  {
+   // Marca este objName como "vivo en este refresh".
+   ArrayResize(g_active_ids, g_active_count + 1);
+   g_active_ids[g_active_count] = objName;
+   g_active_count++;
+   // También su label paralelo si lo creó alguien:
+   ArrayResize(g_active_ids, g_active_count + 1);
+   g_active_ids[g_active_count] = objName + "_lbl";
+   g_active_count++;
+  }
+
+bool IsRegisteredId(const string objName)
+  {
+   for(int i = 0; i < g_active_count; i++)
+      if(g_active_ids[i] == objName) return true;
+   return false;
+  }
+
+int PruneStaleObjects()
+  {
+   int pruned = 0;
+   int total = ObjectsTotal(0, -1, -1);
+   for(int i = total - 1; i >= 0; i--)
+     {
+      string name = ObjectName(0, i, -1, -1);
+      if(StringFind(name, OBJ_PREFIX) != 0) continue;
+      if(IsRegisteredId(name)) continue;
+      ObjectDelete(0, name);
+      pruned++;
+     }
+   return pruned;
+  }
+
+void ClearAll()
+  {
+   int total = ObjectsTotal(0, -1, -1);
+   for(int i = total - 1; i >= 0; i--)
+     {
+      string name = ObjectName(0, i, -1, -1);
+      if(StringFind(name, OBJ_PREFIX) == 0)
+         ObjectDelete(0, name);
+     }
+  }
+//+------------------------------------------------------------------+

@@ -1,0 +1,18 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{\numberline {1}Visión general del proyecto}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Stack de capacidades}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Objetivos de construcción}{2}{subsection.1.2}%
+\contentsline {section}{\numberline {2}Objetivo principal y filosofía}{2}{section.2}%
+\contentsline {section}{\numberline {3}Activos y despliegue multi-símbolo}{2}{section.3}%
+\contentsline {section}{\numberline {4}Arquitectura en 9 capas}{3}{section.4}%
+\contentsline {section}{\numberline {5}Hub central: Orchestrator}{3}{section.5}%
+\contentsline {section}{\numberline {6}Jerarquía de decisión Apex (8 capas)}{3}{section.6}%
+\contentsline {section}{\numberline {7}Flujo operativo completo (12 pasos)}{3}{section.7}%
+\contentsline {section}{\numberline {8}Pipeline Machine Learning}{3}{section.8}%
+\contentsline {section}{\numberline {9}Base de datos PostgreSQL}{6}{section.9}%
+\contentsline {section}{\numberline {10}Auto-aprendizaje y ciclo de evolución}{6}{section.10}%
+\contentsline {section}{\numberline {11}Gestión de riesgo y prop firm}{6}{section.11}%
+\contentsline {section}{\numberline {12}Diagrama de secuencia (tick $\rightarrow $ trade)}{6}{section.12}%
+\contentsline {section}{\numberline {13}Microestructura, salidas y régimenes}{6}{section.13}%
+\contentsline {section}{\numberline {14}Dashboard y tecnologías}{7}{section.14}%
+\contentsline {section}{\numberline {15}Comparativa y conclusión}{7}{section.15}%

@@ -1,0 +1,19 @@
+{
+  "config": {
+    "start": "2025-06-01 00:00:00+00:00",
+    "end": "None",
+    "min_confluence": 0.55,
+    "near_ob_atr": 1.5,
+    "rr_target": 2.0,
+    "max_bars_hold": 96,
+    "cooldown_bars": 4,
+    "tx_cost_r": 0.05,
+    "risk_pct": 0.005,
+    "eval_every_bars": 4
+  },
+  "metrics": {
+    "trades": 0
+  },
+  "monthly": [],
+  "trades": []
+}

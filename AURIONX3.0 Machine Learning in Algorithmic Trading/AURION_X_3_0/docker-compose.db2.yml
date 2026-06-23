@@ -1,0 +1,39 @@
+name: aurionx-db-secondary
+
+services:
+  postgres_db2:
+    image: postgres:15
+    container_name: aurionx_db2
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: aurion
+      POSTGRES_PASSWORD: aurion123
+      POSTGRES_DB: aurionx
+    volumes:
+      - aurionx_data_db2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurion -d aurionx"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin_db2:
+    image: dpage/pgadmin4:latest
+    container_name: aurionx_pgadmin_db2
+    restart: always
+    ports:
+      - "5051:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@aurion.com
+      PGADMIN_DEFAULT_PASSWORD: aurion123
+    volumes:
+      - aurionx_pgadmin_db2:/var/lib/pgadmin
+    depends_on:
+      postgres_db2:
+        condition: service_healthy
+
+volumes:
+  aurionx_data_db2:
+  aurionx_pgadmin_db2:

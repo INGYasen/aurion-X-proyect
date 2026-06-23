@@ -1,0 +1,48 @@
+[
+  {
+    "version_id": "model_v_20260526_160928",
+    "symbol": null,
+    "path": "D:\\AURION_DATA\\models\\versions\\model_v_20260526_160928.pkl",
+    "metrics": {
+      "walk_forward": 1.0,
+      "n_total": 1541.0,
+      "n_train": 1001.0,
+      "n_val": 201.0,
+      "n_test": 309.0,
+      "val_accuracy": 0.9502487562189055,
+      "val_f1": 0.0,
+      "oos_accuracy": 0.9870550161812298,
+      "oos_f1": 0.0,
+      "oos_roc_auc": 0.5537459283387622
+    },
+    "rank": 0.33766990291262133,
+    "reason": "manual",
+    "gate": "first_model",
+    "schema_upgrade": false,
+    "regime_label": "UNKNOWN",
+    "created_at": "2026-05-26T16:09:28.451081+00:00"
+  },
+  {
+    "version_id": "model_v_20260527_150959",
+    "symbol": null,
+    "path": "D:\\AURION_DATA\\models\\versions\\model_v_20260527_150959.pkl",
+    "metrics": {
+      "walk_forward": 1.0,
+      "n_total": 1587.0,
+      "n_train": 1031.0,
+      "n_val": 207.0,
+      "n_test": 318.0,
+      "val_accuracy": 0.966183574879227,
+      "val_f1": 0.0,
+      "oos_accuracy": 0.9465408805031447,
+      "oos_f1": 0.0,
+      "oos_roc_auc": 0.46123120300751874
+    },
+    "rank": 0.33037735849056604,
+    "reason": "manual",
+    "gate": "first_model",
+    "schema_upgrade": false,
+    "regime_label": "UNKNOWN",
+    "created_at": "2026-05-27T15:09:59.734145+00:00"
+  }
+]
