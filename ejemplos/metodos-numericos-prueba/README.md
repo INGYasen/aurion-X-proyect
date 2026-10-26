@@ -27,3 +27,7 @@ python3 scripts/generar_examen_u2.py
 ```
 
 Las imágenes y los logs quedan en `evidencias/ejercicio_0X_*/`.
+
+## Unidad 2 — teoría y prácticas de clase
+
+Las guías PDF de la docente y los Excel de práctica (sesiones 6 a 10, taller 2.1, tarea y examen modelo) están en [`unidad-2/`](unidad-2/README.md). Esa carpeta es la referencia de la forma de la tabla y del método. El libro de arriba es la entrega ya armada del examen modelo.
