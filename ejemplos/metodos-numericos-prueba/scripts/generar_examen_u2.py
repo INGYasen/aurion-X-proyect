@@ -2,7 +2,9 @@
 """Excel del examen modelo U2: despeje a mano (fórmulas) + evidencia Octave completa."""
 from __future__ import annotations
 
+import re
 import subprocess
+import sys
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -35,6 +37,8 @@ WRAP = Alignment(wrap_text=True, vertical="center")
 NUM = "0.0000000000"
 SCI = "0.00E+00"
 
+EXCEL_ERR = re.compile(r"^#(DIV/0!|VALUE!|REF!|NAME\?|NUM!|NULL!|N/A)$")
+
 
 def det3(a, b, c, d, e, f, g, h, i) -> str:
     """Determinante 3×3 expandido (fórmula escalar, se puede copiar)."""
@@ -42,6 +46,71 @@ def det3(a, b, c, d, e, f, g, h, i) -> str:
         f"({a}*({e}*{i}-{f}*{h})"
         f"-{b}*({d}*{i}-{f}*{g})"
         f"+{c}*({d}*{h}-{e}*{g}))"
+    )
+
+
+def add_check(ws, checks: list[tuple[str, str]], row: int, col: int, label: str) -> None:
+    checks.append((label, f"{get_column_letter(col)}{row}"))
+
+
+def verify_workbook(path: Path) -> None:
+    """Falla si alguna fórmula evalúa a error de Excel (#DIV/0!, etc.)."""
+    import formulas
+
+    xl = formulas.ExcelModel().loads(str(path)).finish()
+    sol = xl.calculate()
+    bad: list[str] = []
+    for key, val in sol.items():
+        if val.value is None:
+            continue
+        try:
+            items = val.value.flat if hasattr(val.value, "flat") else [val.value]
+        except Exception:
+            items = [val.value]
+        for item in items:
+            s = str(item).strip()
+            if EXCEL_ERR.match(s):
+                bad.append(f"{key} -> {s}")
+    if bad:
+        raise RuntimeError("Fórmulas con error:\n" + "\n".join(bad[:30]))
+
+
+def build_validacion(ws, checks_by_sheet: dict[str, list[tuple[str, str]]]) -> None:
+    widths(ws, {1: 22, 2: 12, 3: 38, 4: 14})
+    r = banner(ws, 1, "VALIDACIÓN DE INTEGRACIÓN (fórmulas)", FILL_NAVY, FONT_WHITE)
+    r = prose(
+        ws,
+        r,
+        "Cada fila lee una celda de prueba del ejercicio. Si aparece la palabra Revisar o un error de Excel, la hoja marca FALTA. "
+        "Al abrir el archivo, Excel recalcula todas las fórmulas enlazadas.",
+        FILL_YELLOW,
+    )
+    label_row(ws, r, ["Hoja", "Celda", "Prueba", "Estado"])
+    r += 1
+    first = r
+    for sheet, items in checks_by_sheet.items():
+        for label, addr in items:
+            paint(ws.cell(r, 1, sheet))
+            paint(ws.cell(r, 2, addr))
+            paint(ws.cell(r, 3, label))
+            ref = f"'{sheet}'!{addr}"
+            paint(
+                ws.cell(
+                    r,
+                    4,
+                    f'=IF(ISERROR({ref}),"FALTA",IF(ISNUMBER(SEARCH("Revisar",{ref})),"FALTA","OK"))',
+                ),
+                bold=True,
+                fill=FILL_GREEN,
+            )
+            r += 1
+    last = r - 1
+    r += 1
+    ws.cell(r, 1, "ESTADO GLOBAL DEL LIBRO").font = FONT_TITLE
+    paint(
+        ws.cell(r, 2, f'=IF(COUNTIF(D{first}:D{last},"FALTA")>0,"REVISAR HOJAS","INTEGRADO SIN FALLAS")'),
+        bold=True,
+        fill=FILL_GREEN,
     )
 
 
@@ -138,7 +207,7 @@ def header(ws, titulo: str, enunciado: list[str]) -> int:
     return r + 1
 
 
-def build_indice(ws) -> None:
+def build_indice(ws, checks_by_sheet: dict[str, list[tuple[str, str]]]) -> None:
     widths(ws, {1: 28, 2: 42, 3: 55, 4: 36, 5: 22, 6: 18, 7: 18, 8: 18})
     r = banner(ws, 1, "FACULTAD DE INGENIERÍA Y ARQUITECTURA — Métodos numéricos", FILL_NAVY, FONT_WHITE)
     r = banner(ws, r, "Examen modelo U2 — una hoja por ejercicio", FILL_NAVY, FONT_WHITE)
@@ -171,6 +240,10 @@ def build_indice(ws) -> None:
     r += 1
     r = prose(ws, r, "Regenerar evidencias y este archivo:", FILL_GREEN)
     r = prose(ws, r, "bash octave/ejecutar_todos.sh && python3 scripts/generar_examen_u2.py")
+    r += 1
+    n_checks = sum(len(v) for v in checks_by_sheet.values())
+    ws.cell(r, 1, "Control de fórmulas:").font = FONT_B
+    ws.cell(r, 2, f"Hoja 00_Validacion ({n_checks} pruebas enlazadas)")
 
 
 def newton_step(ws, r: int, title: str, xb, yb, zb) -> dict[str, int]:
@@ -238,7 +311,7 @@ def newton_step(ws, r: int, title: str, xb, yb, zb) -> dict[str, int]:
     return {"x": rx, "new": r, "next": r + 1}
 
 
-def build_ej1(ws) -> None:
+def build_ej1(ws, checks: list[tuple[str, str]]) -> None:
     widths(ws, {i: 18 for i in range(1, 9)})
     ws.column_dimensions["A"].width = 28
     r = header(
@@ -295,6 +368,7 @@ def build_ej1(ws) -> None:
     r += 1
     ws.cell(r, 1, "Estado Newton a mano").font = FONT_B
     paint(ws.cell(r, 2, f'=IF(AND(B{r-1}<1E-9,C{r-1}<1E-9,D{r-1}<1E-9),"OK","Revisar")'), fill=FILL_GREEN, bold=True)
+    add_check(ws, checks, r, 2, "Newton: fórmulas = fracciones exactas")
     r += 2
 
     r = banner(ws, r, "A) DESARROLLO PARA COPIAR — Punto fijo (hay que despejar cada incógnita)", FILL_YELLOW, FONT_SEC)
@@ -419,7 +493,32 @@ def build_ej1(ws) -> None:
         paint(ws.cell(r, 4, f"=ABS(D{step1['new']}-D{hand_row})"), SCI)
         r += 1
         paint(ws.cell(r, 2, f'=IF(AND(B{r-1}<1E-8,C{r-1}<1E-8,D{r-1}<1E-8),"OK contra Octave","Revisar")'), fill=FILL_GREEN, bold=True)
+        add_check(ws, checks, r, 2, "Newton iter.2 Excel = Octave")
         r += 2
+    r = banner(ws, r, "Prueba punto fijo — 2 iteraciones vs valores exactos", FILL_ORANGE, FONT_SEC)
+    k1, k2 = r0 + 1, r0 + 2
+    ws.cell(r, 1, "|x1 − √2| , |y1 − 1/3| , |z1 − 1|").font = FONT_B
+    paint(ws.cell(r, 2, f"=ABS(B{k1}-SQRT(2))"), SCI)
+    paint(ws.cell(r, 3, f"=ABS(C{k1}-1/3)"), SCI)
+    paint(ws.cell(r, 4, f"=ABS(D{k1}-1)"), SCI)
+    r += 1
+    ws.cell(r, 1, "|x2 − 2√2/3| , |y2| , |z2 − 19/9|").font = FONT_B
+    paint(ws.cell(r, 2, f"=ABS(B{k2}-2*SQRT(2)/3)"), SCI)
+    paint(ws.cell(r, 3, f"=ABS(C{k2})"), SCI)
+    paint(ws.cell(r, 4, f"=ABS(D{k2}-19/9)"), SCI)
+    r += 1
+    ws.cell(r, 1, "Estado punto fijo (2 iter.)").font = FONT_B
+    paint(
+        ws.cell(
+            r,
+            2,
+            f'=IF(AND(B{r-1}<1E-9,C{r-1}<1E-9,D{r-1}<1E-9,B{r-2}<1E-9,C{r-2}<1E-9,D{r-2}<1E-9),"OK","Revisar")',
+        ),
+        fill=FILL_GREEN,
+        bold=True,
+    )
+    add_check(ws, checks, r, 2, "Punto fijo: 2 iteraciones exactas")
+    r += 2
     r = prose(ws, r, "Gráfica 1 — norma de F en escala logarítmica, todos los arranques (no se omiten los que ya son solución).", FILL_GREEN)
     embed(ws, ev / "octave_newton_varios.png", f"A{r+1}")
     r += 22
@@ -429,7 +528,7 @@ def build_ej1(ws) -> None:
     paste_log(ws, r, ev / "resultado.txt")
 
 
-def build_ej2(ws) -> None:
+def build_ej2(ws, checks: list[tuple[str, str]]) -> None:
     widths(ws, {i: 16 for i in range(1, 9)})
     ws.column_dimensions["A"].width = 34
     r = header(
@@ -537,6 +636,7 @@ def build_ej2(ws) -> None:
     paint(ws.cell(r, 4, f'=ABS(D{jstart+1}-(7/8))'), SCI)
     r += 1
     paint(ws.cell(r, 2, f'=IF(AND(B{r-1}<1E-12,C{r-1}<1E-12,D{r-1}<1E-12),"OK","Revisar")'), fill=FILL_GREEN, bold=True)
+    add_check(ws, checks, r, 2, "Jacobi: 2 iter. = fracciones")
     r += 2
     r, gstart = iter_block(r, "Gauss-Seidel — dos iteraciones (usa el valor recién calculado)", True)
     r += 1
@@ -546,6 +646,7 @@ def build_ej2(ws) -> None:
     paint(ws.cell(r, 4, f"=ABS(D{gstart+1}-(551/576))"), SCI)
     r += 1
     paint(ws.cell(r, 2, f'=IF(AND(B{r-1}<1E-12,C{r-1}<1E-12,D{r-1}<1E-12),"OK","Revisar")'), fill=FILL_GREEN, bold=True)
+    add_check(ws, checks, r, 2, "Gauss-Seidel: 2 iter. = fracciones")
     r += 2
 
     ev = EVID / "ejercicio_02_jacobi_seidel"
@@ -567,6 +668,7 @@ def build_ej2(ws) -> None:
     r += 1
     ws.cell(r, 1, "¿ρ < 1? (converge)").font = FONT_B
     paint(ws.cell(r, 2, f'=IF(AND(B{r-1}<1,D{r-1}<1),"SÍ, ambos","Revisar")'), fill=FILL_GREEN, bold=True)
+    add_check(ws, checks, r, 2, "Convergencia: radios espectrales < 1")
     r += 1
     ws.cell(r, 1, "Solución exacta x, y, z").font = FONT_B
     for j, val in enumerate(exact, 2):
@@ -601,7 +703,7 @@ def build_ej2(ws) -> None:
     paste_log(ws, r, ev / "resultado.txt")
 
 
-def build_ej3(ws) -> None:
+def build_ej3(ws, checks: list[tuple[str, str]]) -> None:
     widths(ws, {i: 18 for i in range(1, 9)})
     ws.column_dimensions["A"].width = 32
     r = header(
@@ -690,6 +792,7 @@ def build_ej3(ws) -> None:
     paint(ws.cell(r, 2, f"=ABS(B{rp}-42)"), SCI)
     paint(ws.cell(r, 3, f"=ABS(B{rf}-8)"), SCI)
     paint(ws.cell(r, 4, f'=IF(AND(B{r}<1E-9,C{r}<1E-9),"OK","Revisar")'), fill=FILL_GREEN, bold=True)
+    add_check(ws, checks, r, 4, "Newton interp.: P(200) y flecha")
     r += 2
 
     ev = EVID / "ejercicio_03_newton_interp"
@@ -709,6 +812,7 @@ def build_ej3(ws) -> None:
     ws.cell(r, 1, "|Excel − Octave| en P(200)").font = FONT_B
     paint(ws.cell(r, 2, f"=ABS(B{rp}-B{r-1})"), SCI)
     paint(ws.cell(r, 3, f'=IF(B{r}<1E-8,"OK","Revisar")'), fill=FILL_GREEN, bold=True)
+    add_check(ws, checks, r, 3, "P(200) Excel = Octave")
     r += 2
     r = prose(ws, r, "Gráfica: datos, polinomio, cota de las torres (50 m) y el segmento de la flecha en x = 200.", FILL_GREEN)
     embed(ws, ev / "octave_catenaria.png", f"A{r+1}")
@@ -716,7 +820,7 @@ def build_ej3(ws) -> None:
     paste_log(ws, r, ev / "resultado.txt")
 
 
-def build_ej4(ws) -> None:
+def build_ej4(ws, checks: list[tuple[str, str]]) -> None:
     widths(ws, {i: 16 for i in range(1, 9)})
     ws.column_dimensions["A"].width = 28
     r = header(
@@ -841,25 +945,22 @@ def build_ej4(ws) -> None:
             k, val = ln.split(",", 1)
             kv[k] = float(val)
     r = banner(ws, r, "EVIDENCIA OCTAVE y prueba contra el Cramer de esta hoja", FILL_GREEN, FONT_SEC)
-    ws.cell(r, 1, "a Octave").font = FONT_B
-    paint(ws.cell(r, 2, kv["a"]), "0.0000000000", FILL_GREEN)
-    ws.cell(r, 3, "|a Excel−Octave|").font = FONT_B
-    paint(ws.cell(r, 4, f"=ABS(B{ra}-B{r})"), SCI)
+    label_row(ws, r, ["", "Valor Octave", "Excel (Cramer)", "|dif.|", "Estado"])
     r += 1
-    ws.cell(r, 1, "b Octave").font = FONT_B
-    paint(ws.cell(r, 2, kv["b"]), "0.0000000000", FILL_GREEN)
-    paint(ws.cell(r, 4, f"=ABS(B{rb}-B{r})"), SCI)
+    for label, row_excel, val_oct in (
+        ("a", ra, kv["a"]),
+        ("b", rb, kv["b"]),
+        ("c", rc, kv["c"]),
+        ("v(4)", rv, kv["v4"]),
+    ):
+        paint(ws.cell(r, 1, label))
+        paint(ws.cell(r, 2, val_oct), "0.0000000000", FILL_GREEN)
+        paint(ws.cell(r, 3, f"=B{row_excel}"), "0.0000000000", FILL_ORANGE)
+        paint(ws.cell(r, 4, f"=ABS(C{r}-B{r})"), SCI)
+        paint(ws.cell(r, 5, f'=IF(D{r}<1E-6,"OK","Revisar")'), bold=True, fill=FILL_GREEN)
+        add_check(ws, checks, r, 5, f"Mínimos cuadrados: {label} Excel=Octave")
+        r += 1
     r += 1
-    ws.cell(r, 1, "c Octave").font = FONT_B
-    paint(ws.cell(r, 2, kv["c"]), "0.0000000000", FILL_GREEN)
-    paint(ws.cell(r, 4, f"=ABS(B{rc}-B{r})"), SCI)
-    r += 1
-    ws.cell(r, 1, "v(4) Octave").font = FONT_B
-    paint(ws.cell(r, 2, kv["v4"]), "0.0000000000", FILL_GREEN, True)
-    paint(ws.cell(r, 4, f"=ABS(B{rv}-B{r})"), SCI)
-    r += 1
-    paint(ws.cell(r, 2, f'=IF(D{r-1}<1E-6,"OK v(4)","Revisar")'), fill=FILL_GREEN, bold=True)
-    r += 2
     r = prose(ws, r, "Gráfica del ajuste y del punto r = 4 cm.", FILL_GREEN)
     embed(ws, ev / "octave_parabola.png", f"A{r+1}")
     r += 22
@@ -869,7 +970,7 @@ def build_ej4(ws) -> None:
     paste_log(ws, r, ev / "resultado.txt")
 
 
-def build_ej5(ws) -> None:
+def build_ej5(ws, checks: list[tuple[str, str]]) -> None:
     widths(ws, {i: 18 for i in range(1, 9)})
     ws.column_dimensions["A"].width = 42
     r = header(
@@ -956,6 +1057,7 @@ def build_ej5(ws) -> None:
     ws.cell(r, 1, "Prueba |suma Li − 1|").font = FONT_B
     paint(ws.cell(r, 2, f"=ABS(B{r-2}-1)"), SCI)
     paint(ws.cell(r, 3, f'=IF(B{r}<1E-9,"OK partición","Revisar")'), fill=FILL_GREEN, bold=True)
+    add_check(ws, checks, r, 3, "Lagrange: L1+L2+L3 = 1")
     r += 2
 
     ev = EVID / "ejercicio_05_lagrange"
@@ -970,7 +1072,8 @@ def build_ej5(ws) -> None:
     r += 1
     ws.cell(r, 1, "|Excel − Octave|").font = FONT_B
     paint(ws.cell(r, 2, f"=ABS(B{rans}-B{r-1})"), SCI)
-    paint(ws.cell(r, 3, f'=IF(B{r}<1E-8,"OK","Revisar")'), fill=FILL_GREEN, bold=True)
+    paint(ws.cell(r, 3, f'=IF(B{r}<1E-8,"OK Octave","Revisar")'), fill=FILL_GREEN, bold=True)
+    add_check(ws, checks, r, 3, "Lagrange inverso: x(y=2) Excel=Octave")
     r += 2
     r = prose(ws, r, "Gráfica: x en función de y, los tres puntos usados y la lectura en y = 2 cm.", FILL_GREEN)
     embed(ws, ev / "octave_lagrange.png", f"A{r+1}")
@@ -981,9 +1084,10 @@ def build_ej5(ws) -> None:
 def main() -> None:
     subprocess.run(["bash", str(OCTAVE / "ejecutar_todos.sh")], check=True)
     wb = Workbook()
-    ws0 = wb.active
-    ws0.title = "00_Indice"
-    build_indice(ws0)
+    wb.remove(wb.active)
+    checks_by_sheet: dict[str, list[tuple[str, str]]] = {}
+    ws_ind = wb.create_sheet("00_Indice", 0)
+    ws_val = wb.create_sheet("00_Validacion", 1)
     sheets = [
         ("Ej1_No_lineal", build_ej1),
         ("Ej2_Jacobi_Seidel", build_ej2),
@@ -993,7 +1097,9 @@ def main() -> None:
     ]
     for name, fn in sheets:
         ws = wb.create_sheet(name)
-        fn(ws)
+        checks: list[tuple[str, str]] = []
+        fn(ws, checks)
+        checks_by_sheet[name] = checks
         ws.page_setup.orientation = "landscape"
         ws.page_setup.fitToPage = True
         ws.page_setup.fitToWidth = 1
@@ -1006,11 +1112,17 @@ def main() -> None:
         ws.page_setup.paperSize = ws.PAPERSIZE_TABLOID
         ws.page_margins = PageMargins(left=0.4, right=0.4, top=0.6, bottom=0.5, header=0.25, footer=0.25)
         ws.sheet_properties.tabColor = NAVY
-    ws0.sheet_properties.tabColor = "C65911"
-    ws0.sheet_view.showGridLines = False
+    build_validacion(ws_val, checks_by_sheet)
+    build_indice(ws_ind, checks_by_sheet)
+    ws_ind.sheet_properties.tabColor = "C65911"
+    ws_ind.sheet_view.showGridLines = False
+    ws_val.sheet_properties.tabColor = "548235"
+    wb.calculation.fullCalcOnLoad = True
+    wb.calculation.calcOnSave = True
     OUT.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT)
-    print(f"Generado: {OUT}")
+    verify_workbook(OUT)
+    print(f"Generado y verificado (0 errores de fórmula): {OUT}")
 
 
 if __name__ == "__main__":

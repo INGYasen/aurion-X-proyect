@@ -9,6 +9,7 @@ Entrega del examen modelo de Métodos Numéricos (Mg. Jessica Perez Rivera). Una
 | Hoja | Ejercicio del PDF |
 |------|-------------------|
 | `00_Indice` | Qué hay en cada hoja |
+| `00_Validacion` | **15 pruebas enlazadas**; debe decir **INTEGRADO SIN FALLAS** al abrir en Excel |
 | `Ej1_No_lineal` | Sistema no lineal: Newton, punto fijo, sustitución |
 | `Ej2_Jacobi_Seidel` | Reordenar a E.D.D., Jacobi y Gauss-Seidel |
 | `Ej3_Newton_interp` | Catenaria, polinomio de Newton, flecha en el punto medio |
