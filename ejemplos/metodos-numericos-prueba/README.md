@@ -1,36 +1,32 @@
-# Prueba: métodos numéricos (Excel + Octave)
+# Simulación entrega U2 — Excel multihoja + Octave
 
-Demostración de cómo se entregaría una práctica con **hoja de cálculo** y **evidencias en GNU Octave**.
+Ejemplo de entrega **completa**: una **hoja por ejercicio**, **imagen de Octave incrustada** en cada hoja y filas de **prueba** (Excel vs Octave).
 
-## Ejercicio de ejemplo
+Inspirado en el examen modelo U2 (ejercicios 4 y 5 del PDF: parábola por mínimos cuadrados e integración).
 
-Raíz de \(f(x) = x^3 - x - 2\) en \([1, 2]\) con el **método de bisección** y tolerancia \(\varepsilon = 10^{-6}\).
+## Archivo principal
 
-## Contenido
+`excel/simulacion_examen_u2_multihoja.xlsx`
 
-| Ruta | Descripción |
-|------|-------------|
-| `excel/ejemplo_metodos_numericos_biseccion.xlsx` | Tabla con fórmulas en Excel |
-| `octave/biseccion_ejemplo.m` | Script reproducible |
-| `evidencias/salida_consola.txt` | Log de ejecución (tabla de iteraciones) |
-| `evidencias/iteraciones_biseccion.csv` | Mismos datos en CSV |
-| `evidencias/biseccion_fx_raiz.png` | Gráfica \(f(x)\) y raíz aproximada |
+| Hoja | Contenido |
+|------|-----------|
+| **Indice** | Lista de ejercicios y enlace conceptual al PDF modelo |
+| **Ejercicio_1** | Bisección + tabla + prueba + gráfica Octave |
+| **Ejercicio_2** | Newton-Raphson + prueba + gráfica |
+| **Ejercicio_3** | Gauss 3×3 + residual + gráfica |
+| **Ejercicio_4** | Mínimos cuadrados (parábola) + ŷ Excel vs Octave |
+| **Ejercicio_5** | Trapecio + errores + gráfica |
 
-## Cómo reproducir (Octave)
-
-Desde la raíz de este ejemplo:
+## Regenerar todo (Octave → Excel)
 
 ```bash
 cd ejemplos/metodos-numericos-prueba
-octave --no-gui --quiet octave/biseccion_ejemplo.m
+bash octave/ejecutar_todos.sh
+python3 scripts/generar_entrega_simulacion.py
 ```
 
-O:
-
-```bash
-bash octave/ejecutar_demo.sh
-```
+Evidencias por ejercicio en `evidencias/ejercicio_XX_*/` (`resultado.txt`, `octave_grafica.png`).
 
 ## Nota
 
-Esta carpeta es solo **muestra de formato**; no forma parte del sistema de trading del repositorio principal.
+Simulación con datos de ejemplo; al recibir tu enunciado real se sustituyen datos y se mantiene el mismo formato (1 hoja = 1 ejercicio).
