@@ -1,0 +1,8 @@
+EJERCICIO 5 — EVIDENCIA OCTAVE
+Puntos (1)(2)(3): (y,x) = (4.97,2.5), (2.47,5.0), (1.22,7.5)
+Se interpola x = P(y) y se evalua en y=2.
+L1,-0.039104000000
+L2,0.741312000000
+L3,0.297792000000
+x_en_y2,5.842240000000
+suma_L,1.000000000000e+00

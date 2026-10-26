@@ -1,32 +1,28 @@
-# Simulación entrega U2 — Excel multihoja + Octave
+# Examen modelo U2 — Excel con despeje y evidencia Octave
 
-Ejemplo de entrega **completa**: una **hoja por ejercicio**, **imagen de Octave incrustada** en cada hoja y filas de **prueba** (Excel vs Octave).
+Entrega del examen modelo de Métodos Numéricos (Mg. Jessica Perez Rivera). Una hoja de Excel por ejercicio. En cada hoja está el enunciado, el desarrollo para copiar (despejes y fracciones), las fórmulas que arman cada número, las gráficas de Octave y el log completo.
 
-Inspirado en el examen modelo U2 (ejercicios 4 y 5 del PDF: parábola por mínimos cuadrados e integración).
+## Archivo para abrir
 
-## Archivo principal
+`excel/examen_modelo_u2_completo.xlsx`
 
-`excel/simulacion_examen_u2_multihoja.xlsx`
+| Hoja | Ejercicio del PDF |
+|------|-------------------|
+| `00_Indice` | Qué hay en cada hoja |
+| `Ej1_No_lineal` | Sistema no lineal: Newton, punto fijo, sustitución |
+| `Ej2_Jacobi_Seidel` | Reordenar a E.D.D., Jacobi y Gauss-Seidel |
+| `Ej3_Newton_interp` | Catenaria, polinomio de Newton, flecha en el punto medio |
+| `Ej4_Minimos` | Tubo de Pitot, parábola por mínimos cuadrados |
+| `Ej5_Lagrange` | Interpolación inversa, Lagrange de grado 2 |
 
-| Hoja | Contenido |
-|------|-----------|
-| **Indice** | Lista de ejercicios y enlace conceptual al PDF modelo |
-| **Ejercicio_1** | Bisección + tabla + prueba + gráfica Octave |
-| **Ejercicio_2** | Newton-Raphson + prueba + gráfica |
-| **Ejercicio_3** | Gauss 3×3 + residual + gráfica |
-| **Ejercicio_4** | Mínimos cuadrados (parábola) + ŷ Excel vs Octave |
-| **Ejercicio_5** | Trapecio + errores + gráfica |
+Las celdas en amarillo son el desarrollo a mano. Las naranjas son la respuesta. Las verdes son la corrida de Octave.
 
-## Regenerar todo (Octave → Excel)
+## Regenerar
 
 ```bash
 cd ejemplos/metodos-numericos-prueba
 bash octave/ejecutar_todos.sh
-python3 scripts/generar_entrega_simulacion.py
+python3 scripts/generar_examen_u2.py
 ```
 
-Evidencias por ejercicio en `evidencias/ejercicio_XX_*/` (`resultado.txt`, `octave_grafica.png`).
-
-## Nota
-
-Simulación con datos de ejemplo; al recibir tu enunciado real se sustituyen datos y se mantiene el mismo formato (1 hoja = 1 ejercicio).
+Las imágenes y los logs quedan en `evidencias/ejercicio_0X_*/`.
